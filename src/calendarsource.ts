@@ -123,10 +123,10 @@ interface TaskNotesSource {
 
 /** Source id given to every TaskNotes task/timeblock entry, so it resolves a
  * label and colour through the same lookup as an ICS feed. */
-const TASKNOTES_SOURCE_ID = "hearth:tasknotes";
+const TASKNOTES_SOURCE_ID = "rbandi-hearth:tasknotes";
 
 /** Source id prefix for a calendar subscribed inside TaskNotes. */
-const TASKNOTES_SUB_PREFIX = "hearth:tnsub:";
+const TASKNOTES_SUB_PREFIX = "rbandi-hearth:tnsub:";
 
 /** Resolve the card's TaskNotes source: its live settings plus the layers to
  * draw. Each layer follows TaskNotes' own calendar settings unless this card

@@ -54,6 +54,7 @@ export const en = {
 		couldNotUndoRecurring:
 			"Hearth: couldn't undo the recurring task completion.",
 		couldNotAddKanbanCard: "Hearth: couldn't add the card to the Kanban board.",
+		couldNotUpdateStamp: "Hearth: couldn't update that stamp.",
 		couldNotConvertCard: "Hearth: couldn't convert the card into a note.",
 		templaterNoTemplate: (path: string) =>
 			`Hearth: template not found: ${path}`,
@@ -1274,6 +1275,9 @@ export const en = {
 			git: "Git",
 			leaf: "Plugin view (beta)",
 			pet: "Pet",
+			randomNote: "Random note",
+			question: "Daily question",
+			stamps: "Ritual stamps",
 		},
 		linkTypes: {
 			note: "Note",
@@ -1445,6 +1449,58 @@ export const en = {
 			countDesc: "How many recently-opened files to list.",
 			types: "File types",
 			typesDesc: "Only list files of the selected types. Pick any combination; none selected shows every type.",
+			sort: "Sort by",
+			sortDesc: "\"Opened\" follows your workspace history. \"Created\"/\"Modified\" scan the vault by that file timestamp instead, regardless of what you've had open — and can be filtered to a recent window below.",
+			sortOpened: "Recently opened",
+			sortCreated: "Recently created",
+			sortModified: "Recently modified",
+			withinDays: "Within last N days",
+			withinDaysDesc: "Only list files whose sort timestamp falls within this many days of now. Blank means no limit.",
+			withinDaysPlaceholder: "e.g. 7",
+			folders: "Folders",
+			foldersDesc: "Optional. Only list files inside these folders (and their subfolders). Add none for no restriction; add several to pool them together.",
+		},
+		folderList: {
+			placeholder: "e.g. Knowledge/Fleeting",
+			pick: "Choose folder",
+			remove: "Remove folder",
+			add: "Add folder",
+		},
+		randomNote: {
+			folders: "Folders",
+			foldersDesc: "Optional. Pick from these folders (and their subfolders) instead of the whole vault. Add none for no restriction; add several to pool them together.",
+			info: "How it picks",
+			infoDesc: "One note per calendar day, chosen deterministically from the pool — stable all day, different tomorrow, never the same as yesterday's.",
+		},
+		question: {
+			showMark: "Show \"?\" mark",
+			showMarkDesc: "Show the large question-mark glyph above the question text.",
+			sourceHeading: "Question source",
+			note: "Question note",
+			noteDesc: "Optional. Drive the pool from a note instead of the list below — one question per line (or bullet list). Lets an external agent or script edit the pool directly. Created automatically the first time, seeded with the default questions, if it doesn't exist yet.",
+			notePlaceholder: "e.g. Hearth Tracking",
+			pickNote: "Choose note",
+			clearNote: "Clear note",
+			noteModeInfo: "Reading from a note",
+			noteModeInfoDesc: "This card's pool comes from the note above — one question per line. Edit it directly (by hand, or from a script/agent) rather than here.",
+			heading: "Question pool",
+			headingDesc: "One is shown per day, picked deterministically from this list. Leave empty to use the built-in default pool.",
+			removeQuestion: "Remove question",
+			addQuestion: "Add question",
+			resetDefaults: "Reset to built-in questions",
+			resetDefaultsDesc: "Discards your custom pool and goes back to the default questions.",
+			resetDefaultsButton: "Reset",
+		},
+		stamps: {
+			note: "Tracking note",
+			noteDesc: "The note whose frontmatter holds each ritual's last-done date. Created automatically the first time you stamp, if it doesn't exist yet.",
+			notePlaceholder: "e.g. System/Dashboard",
+			pickNote: "Choose note",
+			fieldsHeading: "Rituals",
+			labelPlaceholder: "Label, e.g. Cleanup",
+			propertyPlaceholder: "Frontmatter property, e.g. cleanup-last",
+			removeField: "Remove ritual",
+			addField: "Add ritual",
 		},
 		calendar: {
 			view: "Layout",
@@ -2447,6 +2503,12 @@ export const en = {
 			leafPickView: "Pick a plugin view in card settings",
 			leafViewMissing:
 				"This view isn't available — enable the plugin that provides it",
+			randomNoteEmpty: "No notes found — check the folder in card settings",
+			stampsNoNote: "Pick a tracking note in card settings",
+			stampsMissing: "That note doesn't exist yet",
+			stampsNoFields: "Add a ritual to track in card settings",
+			questionMissing: "That note doesn't exist yet",
+			questionEmptyPool: "No questions found in the note",
 		},
 		templater: {
 			untitledTile: "New note",
@@ -2627,6 +2689,19 @@ export const en = {
 		heatmap: {
 			less: "Less",
 			more: "More",
+		},
+		randomNote: {
+			hint: "Today's pick",
+			refresh: "Show another",
+		},
+		question: {
+			createNote: "Create note",
+			refresh: "Show another",
+		},
+		stamps: {
+			never: "Never",
+			stampNow: "Stamp now",
+			createNote: "Create note",
 		},
 		calendar: {
 			previousMonth: "Previous month",
@@ -2911,6 +2986,9 @@ export const en = {
 		git: "Git",
 		leaf: "Plugin view (beta)",
 		pet: "Pet",
+		randomNote: "Random note",
+		question: "Daily question",
+		stamps: "Ritual stamps",
 	},
 
 	/** One line per template, shown under its name in the add-card picker and
@@ -2949,6 +3027,9 @@ export const en = {
 		git: "Repository status, with commit, pull and push",
 		leaf: "Another plugin's side panel, hosted in a card",
 		pet: "A small companion that lives on your board",
+		randomNote: "One note a day, picked for you",
+		question: "A thought-provoking question, one per day",
+		stamps: "When you last did a recurring chore, one tap to update it",
 	},
 
 	// ---- Add-card picker -----------------------------------------------

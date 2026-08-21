@@ -291,7 +291,7 @@ export class HomeSettingTab extends PluginSettingTab {
 			// The datalist or the navigation itself failed to build. Append the
 			// error rather than empty()-ing, so anything that survived still lets
 			// the user navigate.
-			this.renderError(containerEl, "Hearth", err);
+			this.renderError(containerEl, "rbandi-Hearth", err);
 		}
 	}
 

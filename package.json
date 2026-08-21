@@ -1,5 +1,5 @@
 {
-	"name": "hearth",
+	"name": "rbandi-hearth",
 	"version": "2.0.0",
 	"description": "A beautiful, customizable home screen for your vault — search, dashboard, and launcher in one.",
 	"main": "main.js",

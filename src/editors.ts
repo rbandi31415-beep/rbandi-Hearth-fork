@@ -2,6 +2,7 @@ import { Notice, Setting, type App } from "obsidian";
 import { CARD_KINDS, cardDefinition } from "./cards";
 import { type CardEditorContext } from "./cards/definition";
 import { t } from "./i18n";
+import { FolderPickerModal } from "./pickers";
 import { HearthTabbedModal, type HearthModalTab } from "./tabbedmodal";
 import {
 	CARD_BORDER_WIDTH_MAX,
@@ -417,4 +418,73 @@ export function moveItem<T>(ctx: CardEditorContext, arr: T[], from: number, to: 
 	arr.splice(to, 0, item);
 	ctx.opts.save();
 	ctx.requestRender();
+}
+
+
+/**
+ * A reorderable list of vault folders — "restrict to these folders" scoping
+ * shared by any card whose pool can be narrowed to more than one place
+ * (recent files, random note). One row per folder (path text + picker +
+ * remove), plus an "Add folder" button. An empty/undefined list means no
+ * restriction — the card's own render code decides what that means.
+ */
+export function folderListEditor(
+	ctx: CardEditorContext,
+	containerEl: HTMLElement,
+	get: () => string[],
+	set: (folders: string[] | undefined) => void,
+): void {
+	const commit = (folders: string[]): void => {
+		const cleaned = folders.map((f) => f.trim()).filter((f) => f.length > 0);
+		set(cleaned.length > 0 ? cleaned : undefined);
+	};
+
+	const folders = get();
+	folders.forEach((folder, index) => {
+		const row = new Setting(containerEl).setClass("hearth-link-setting");
+		row.addText((txt) =>
+			txt
+				.setPlaceholder(t().editors.folderList.placeholder)
+				.setValue(folder)
+				.onChange((v) => {
+					folders[index] = v;
+					commit(folders);
+					ctx.opts.save();
+				}),
+		);
+		row.addExtraButton((b) =>
+			b
+				.setIcon("folder-symlink")
+				.setTooltip(t().editors.folderList.pick)
+				.onClick(() => {
+					new FolderPickerModal(ctx.app, (f) => {
+						folders[index] = f.path === "/" ? "" : f.path;
+						commit(folders);
+						ctx.opts.save();
+						ctx.requestRender();
+					}).open();
+				}),
+		);
+		row.addExtraButton((b) =>
+			b
+				.setIcon("trash-2")
+				.setTooltip(t().editors.folderList.remove)
+				.onClick(() => {
+					folders.splice(index, 1);
+					commit(folders);
+					ctx.opts.save();
+					ctx.requestRender();
+				}),
+		);
+	});
+
+	new Setting(containerEl).addButton((b) =>
+		b.setButtonText(t().editors.folderList.add).onClick(() => {
+			new FolderPickerModal(ctx.app, (f) => {
+				commit([...folders, f.path === "/" ? "" : f.path]);
+				ctx.opts.save();
+				ctx.requestRender();
+			}).open();
+		}),
+	);
 }

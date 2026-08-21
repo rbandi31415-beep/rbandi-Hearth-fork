@@ -53,6 +53,7 @@ describe("CARD_TEMPLATES (add-card menu)", () => {
 			{ id: "excalidraw", icon: "pen-tool", category: "notes", requires: null, build: { kind: "embed", title: "Drawing", target: "", w: 6, h: 4 } },
 			{ id: "base", icon: "database", category: "notes", requires: null, build: { kind: "embed", title: "Base", target: "", w: 6, h: 4 } },
 			{ id: "recent", icon: "history", category: "notes", requires: null, build: { kind: "recent", title: "Recent", count: 8, w: 4, h: 3 } },
+			{ id: "randomNote", icon: "shuffle", category: "notes", requires: null, build: { kind: "randomNote", title: "Random note", w: 4, h: 3 } },
 			{ id: "favorites", icon: "star", category: "notes", requires: null, build: { kind: "favorites", title: "Favorites", w: 4, h: 3 } },
 			{ id: "bookmarks", icon: "bookmark", category: "notes", requires: null, build: { kind: "bookmarks", title: "Bookmarks", w: 4, h: 3 } },
 
@@ -67,6 +68,7 @@ describe("CARD_TEMPLATES (add-card menu)", () => {
 			{ id: "searchbar", icon: "text-cursor-input", category: "vault", requires: null, build: { kind: "searchbar", title: "", searchBar: {}, w: 6, h: 1 } },
 			{ id: "stats", icon: "bar-chart-3", category: "vault", requires: null, build: { kind: "stats", title: "Stats", w: 4, h: 2 } },
 			{ id: "heatmap", icon: "activity", category: "vault", requires: null, build: { kind: "heatmap", title: "Activity", heatmap: {}, w: 6, h: 3 } },
+			{ id: "stamps", icon: "stamp", category: "vault", requires: null, build: { kind: "stamps", title: "Last done", stampFields: [{ id: "cleanup", label: "Cleanup", property: "cleanup-last" }, { id: "linking", label: "Linking", property: "linking-last" }], w: 4, h: 3 } },
 
 			// ---- Tools ----
 			{ id: "links", icon: "layout-grid", category: "tools", requires: null, build: { kind: "links", title: "Links", links: [], w: 6, h: 2 } },
@@ -129,6 +131,7 @@ describe("CARD_TEMPLATES (add-card menu)", () => {
 
 			// ---- Fun ----
 			{ id: "pet", icon: "cat", category: "fun", requires: null, build: { kind: "pet", title: "Pet", pet: {}, w: 3, h: 4 } },
+			{ id: "question", icon: "help-circle", category: "fun", requires: null, build: { kind: "question", title: "Today's question", w: 5, h: 3 } },
 		]);
 	});
 
@@ -322,7 +325,7 @@ describe("liveness classification", () => {
 			bookmarks: "static",
 			favorites: "static",
 			text: "static",
-			recent: "static",
+			recent: "vault",
 			links: "static",
 			commands: "static",
 			templater: "static",
@@ -343,6 +346,9 @@ describe("liveness classification", () => {
 			git: "static",
 			leaf: "static",
 			pet: "vault",
+			randomNote: "static",
+			question: "watch-file",
+			stamps: "watch-file",
 		});
 	});
 });

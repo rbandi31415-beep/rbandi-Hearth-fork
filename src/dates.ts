@@ -93,6 +93,37 @@ export function localDayKey(ts: number): string {
 	return `${y}-${m < 10 ? "0" : ""}${m}-${day < 10 ? "0" : ""}${day}`;
 }
 
+/**
+ * A stable index into an array of `length`, deterministic for a given day key
+ * ("YYYY-MM-DD" — see localDayKey). The same day always picks the same index,
+ * and the pick changes the next day, without persisting any chosen-item state
+ * (the random-note and question cards use this to rotate their daily pick).
+ * Not cryptographic — just enough spread that a short pool doesn't visibly
+ * cycle in date order.
+ */
+export function dailyPickIndex(dayKey: string, length: number): number {
+	if (length <= 0) return -1;
+	let hash = 0;
+	for (let i = 0; i < dayKey.length; i++) {
+		hash = (hash * 31 + dayKey.charCodeAt(i)) | 0;
+	}
+	return Math.abs(hash) % length;
+}
+
+/**
+ * Like dailyPickIndex, but nudged forward by one whenever it would otherwise
+ * land on the same index as yesterday's pick — so a daily rotation never
+ * shows the same item on two consecutive days. It's still a hash rather than
+ * a full-coverage shuffle, so a repeat a few days later is expected for a
+ * small pool; this only rules out *back-to-back* repeats.
+ */
+export function dailyPickIndexNoRepeat(now: number, length: number): number {
+	if (length <= 1) return dailyPickIndex(localDayKey(now), length);
+	const idx = dailyPickIndex(localDayKey(now), length);
+	const prevIdx = dailyPickIndex(localDayKey(now - 86_400_000), length);
+	return idx === prevIdx ? (idx + 1) % length : idx;
+}
+
 /** Parse a natural-language date expression to YYYY-MM-DD (null if not a date). */
 export function parseNaturalDate(input: string): string | null {
 	let text = input.trim();

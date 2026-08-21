@@ -36,7 +36,10 @@ export type CardKind =
 	| "weather"
 	| "git"
 	| "leaf"
-	| "pet";
+	| "pet"
+	| "randomNote"
+	| "question"
+	| "stamps";
 
 /** A refinement control available on a Jira saved-filter card. */
 export type JiraControl =
@@ -1199,6 +1202,15 @@ export interface LinkItem {
 	row?: number;
 }
 
+/** A single tracked ritual on a "stamps" card — a label plus the frontmatter
+ * property (on the card's tracking note) that holds its last-done date. */
+export interface StampFieldDef {
+	id: string;
+	label: string;
+	/** Frontmatter property on the tracking note, holding a YYYY-MM-DD date. */
+	property: string;
+}
+
 export interface DashboardCard {
 	id: string;
 	kind: CardKind;
@@ -1234,6 +1246,41 @@ export interface DashboardCard {
 	 * Any combination of the search filter's types; undefined or empty means all
 	 * types are shown. */
 	recentTypes?: string[];
+	/** kind === "recent": which timestamp orders the list. "opened" (default)
+	 * uses the workspace's recently-opened file history; "created"/"modified"
+	 * scan the vault by that file timestamp instead, independent of what's
+	 * been opened — and support recentWithinDays below. */
+	recentSort?: "opened" | "created" | "modified";
+	/** kind === "recent": only include files whose sort timestamp is within
+	 * this many days of now. Ignored when recentSort is "opened" (workspace
+	 * history carries no per-file timestamp to filter by). Undefined/0 means
+	 * no age limit. */
+	recentWithinDays?: number;
+	/** kind === "recent": restrict the list to these folders (and their
+	 * subfolders) — a file counts if it's inside any of them. Undefined/empty
+	 * means no folder restriction. */
+	recentFolders?: string[];
+	/** kind === "randomNote": restrict the daily pick to these folders (and
+	 * their subfolders) — pooled together. Undefined/empty means the whole
+	 * vault. */
+	randomNoteFolders?: string[];
+	/** kind === "question": the question pool, picked from deterministically by
+	 * today's date. Undefined/empty falls back to the built-in default list.
+	 * Ignored while questionNote is set — the note is the pool then. */
+	questions?: string[];
+	/** kind === "question": a note whose body is the question pool instead —
+	 * one question per line (leading list markers stripped). Lets an external
+	 * agent or script drive the card by editing a plain note. Undefined means
+	 * the card uses `questions`/the built-in default instead. */
+	questionNote?: string;
+	/** kind === "question": show the "?" mark above the question text. Default
+	 * true; explicit false hides it. */
+	questionShowMark?: boolean;
+	/** kind === "stamps": the note whose frontmatter holds each ritual's last-done
+	 * date. */
+	stampNote?: string;
+	/** kind === "stamps": the tracked rituals, in display order. */
+	stampFields?: StampFieldDef[];
 	/** kind === "clock": time/greeting/date display options. */
 	clock?: ClockConfig;
 	/** kind === "tasks": source, folder scope and display options. */
@@ -1972,10 +2019,10 @@ function starterCards(): DashboardCard[] {
  * swapping in any other plugin's command. */
 export function defaultMobileActionButtons(): MobileActionButton[] {
 	return [
-		{ id: "action-new-note", label: "New note", icon: "plus", type: "command", target: "hearth:new-note" },
-		{ id: "action-new-drawing", label: "New drawing", icon: "pen-tool", type: "command", target: "hearth:new-drawing" },
-		{ id: "action-record-voice", label: "Record voice", icon: "mic", type: "command", target: "hearth:record-voice" },
-		{ id: "action-daily-note", label: "Daily note", icon: "calendar", type: "command", target: "hearth:open-daily-note" },
+		{ id: "action-new-note", label: "New note", icon: "plus", type: "command", target: "rbandi-hearth:new-note" },
+		{ id: "action-new-drawing", label: "New drawing", icon: "pen-tool", type: "command", target: "rbandi-hearth:new-drawing" },
+		{ id: "action-record-voice", label: "Record voice", icon: "mic", type: "command", target: "rbandi-hearth:record-voice" },
+		{ id: "action-daily-note", label: "Daily note", icon: "calendar", type: "command", target: "rbandi-hearth:open-daily-note" },
 	];
 }
 

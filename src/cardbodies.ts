@@ -166,7 +166,7 @@ export function livePreviewSetting(
 
 
 /** Strip a leading YAML frontmatter block so it isn't rendered as body content. */
-function stripFrontmatter(text: string): string {
+export function stripFrontmatter(text: string): string {
 	const match = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/.exec(text);
 	return match ? text.slice(match[0].length) : text;
 }

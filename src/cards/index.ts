@@ -36,6 +36,9 @@ import { weatherCard } from "./weather";
 import { gitCard } from "./git";
 import { leafCard } from "./leaf";
 import { petCard } from "./pet";
+import { randomNoteCard } from "./randomNote";
+import { questionCard } from "./question";
+import { stampsCard } from "./stamps";
 
 export type {
 	CardCategory,
@@ -82,6 +85,9 @@ export const CARD_DEFINITIONS: { [K in CardKind]: CardDefinition<K> } = {
 	git: gitCard,
 	leaf: leafCard,
 	pet: petCard,
+	randomNote: randomNoteCard,
+	question: questionCard,
+	stamps: stampsCard,
 };
 
 /** Every registered kind, in registry order. Used for layout-import validation
@@ -121,13 +127,13 @@ export function cardDefinition(card: DashboardCard): CardDefinition {
 export const TEMPLATE_MENU_GROUPS: { category: CardCategory; templates: string[] }[] = [
 	{
 		category: "notes",
-		templates: ["note", "daily", "image", "slideshow", "canvas", "excalidraw", "base", "recent", "favorites", "bookmarks"],
+		templates: ["note", "daily", "image", "slideshow", "canvas", "excalidraw", "base", "recent", "randomNote", "favorites", "bookmarks"],
 	},
 	{ category: "planning", templates: ["tasks", "schedule", "calendar", "clock"] },
-	{ category: "vault", templates: ["search", "searchbar", "stats", "heatmap"] },
+	{ category: "vault", templates: ["search", "searchbar", "stats", "heatmap", "stamps"] },
 	{ category: "tools", templates: ["links", "commands", "text", "calculator", "web"] },
 	{ category: "integrations", templates: ["templater", "dataview", "datacore", "git", "jira", "rss", "weather", "leaf"] },
-	{ category: "fun", templates: ["pet"] },
+	{ category: "fun", templates: ["pet", "question"] },
 ];
 
 /** The categories, in picker order. */
