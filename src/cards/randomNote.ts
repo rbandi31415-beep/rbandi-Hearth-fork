@@ -53,8 +53,10 @@ export function renderRandomNote(view: HomeView, card: DashboardCard, body: HTML
 		const file = pool[(base + offset) % pool.length];
 
 		const wrap = body.createDiv("hearth-randomnote");
-		const icons = fileIconOptions(view.plugin.settings);
-		applyFileIcon(wrap.createDiv("hearth-randomnote-icon"), resolveFileIcon(view.app, file, icons));
+		if (card.randomNoteShowIcon !== false) {
+			const icons = fileIconOptions(view.plugin.settings);
+			applyFileIcon(wrap.createDiv("hearth-randomnote-icon"), resolveFileIcon(view.app, file, icons));
+		}
 		wrap.createDiv({ cls: "hearth-randomnote-name", text: file.basename });
 		wrap.createDiv({ cls: "hearth-randomnote-hint", text: t().cards.randomNote.hint });
 
@@ -64,15 +66,31 @@ export function renderRandomNote(view: HomeView, card: DashboardCard, body: HTML
 	};
 	draw();
 
-	cardOverlayButton(body, "refresh-cw", t().cards.randomNote.refresh, () => {
-		offset = (offset + 1) % pool.length;
-		draw();
-	});
+	cardOverlayButton(
+		body,
+		"refresh-cw",
+		t().cards.randomNote.refresh,
+		() => {
+			offset = (offset + 1) % pool.length;
+			draw();
+		},
+		"bottom-right",
+	);
 }
 
 
 export function randomNoteEditor(ctx: CardEditorContext, containerEl: HTMLElement): void {
 	const card = ctx.card;
+	new Setting(containerEl)
+		.setName(t().editors.randomNote.showIcon)
+		.setDesc(t().editors.randomNote.showIconDesc)
+		.addToggle((tg) =>
+			tg.setValue(card.randomNoteShowIcon !== false).onChange((v) => {
+				card.randomNoteShowIcon = v ? undefined : false;
+				ctx.opts.save();
+				ctx.requestRender();
+			}),
+		);
 	new Setting(containerEl)
 		.setName(t().editors.randomNote.folders)
 		.setDesc(t().editors.randomNote.foldersDesc);

@@ -33,6 +33,7 @@
  * carry no Obsidian dependency and are unit-tested in `test/git.test.ts`.
  */
 import type { App } from "obsidian";
+import { localDayKey } from "./dates";
 
 /** The community-plugin id obsidian-git registers itself under. */
 export const GIT_PLUGIN_ID = "obsidian-git";
@@ -744,6 +745,26 @@ export function parseCommitDate(raw: string | undefined): number | null {
 	if (!raw) return null;
 	const ms = new Date(raw).getTime();
 	return Number.isNaN(ms) ? null : ms;
+}
+
+/**
+ * Commit counts per local day, for the heatmap's "commits" metric. Reads a
+ * generous but bounded log (`limit`) rather than the whole history — a
+ * personal vault's repo is small enough that this comfortably covers a
+ * 53-week heatmap, and it stays a single bounded read either way.
+ */
+export async function commitsByDay(app: App, limit = 1000): Promise<Map<string, number>> {
+	const counts = new Map<string, number>();
+	const plugin = getGitPlugin(app);
+	if (!plugin) return counts;
+	const snapshot = await readGitSnapshot(plugin, { logLimit: limit, includeSync: false });
+	for (const entry of snapshot.log ?? []) {
+		const ms = parseCommitDate(entry.date);
+		if (ms == null) continue;
+		const key = localDayKey(ms);
+		counts.set(key, (counts.get(key) ?? 0) + 1);
+	}
+	return counts;
 }
 
 /** The abbreviated commit hash git itself shows. */

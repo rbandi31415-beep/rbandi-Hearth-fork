@@ -1467,6 +1467,8 @@ export const en = {
 			add: "Add folder",
 		},
 		randomNote: {
+			showIcon: "Show file icon",
+			showIconDesc: "Show the file-type icon above the note name.",
 			folders: "Folders",
 			foldersDesc: "Optional. Pick from these folders (and their subfolders) instead of the whole vault. Add none for no restriction; add several to pool them together.",
 			info: "How it picks",
@@ -1687,14 +1689,25 @@ export const en = {
 		},
 		heatmap: {
 			metric: "Metric",
+			color: "Color",
+			colorDesc: "The color the heatmap is shaded in. Defaults to your theme's accent color.",
 			weeks: "Weeks",
 			weeksDesc: "How many weeks of history to show.",
+			combinedMetrics: "Metrics to combine",
+			metricColors: "Colors",
+			combinedStyle: "Display",
+			combinedStyleDesc: "\"Split\" divides each day into one stripe per metric, each shaded against its own scale. \"Blended\" sums them into one number per day, shown like a single metric. \"Mixed\" blends each metric's own colour into one swatch, weighted by how active that metric was that day.",
+			combinedStyleSplit: "Split cells",
+			combinedStyleBlended: "Blended",
+			combinedStyleMixed: "Color mixing",
 		},
 		stats: {
 			advanced: "Advanced",
 			advancedDesc:
 				"Choose which stats to show, break attachments out by file type, and add " +
 				"custom counts. Off shows the default set.",
+			fitToCard: "Fit to card",
+			fitToCardDesc: "Shrink tile icon and text size just enough that every selected stat fits the card without scrolling, however many you've turned on.",
 			builtins: "Stats to show",
 			builtinsDesc: "Pick which built-in stats appear. The day streak only shows when daily notes are set up.",
 			attachmentTypes: "Attachment breakdown",
@@ -1712,6 +1725,9 @@ export const en = {
 		metricOptions: {
 			modified: "Notes edited",
 			created: "Notes created",
+			commits: "Commits",
+			tasksCompleted: "Tasks completed",
+			combined: "Combined",
 		},
 		savedSearch: {
 			query: "Query",
@@ -2687,8 +2703,7 @@ export const en = {
 			noNoteYet: "No note for today yet",
 		},
 		heatmap: {
-			less: "Less",
-			more: "More",
+			combinedLabel: "combined activity",
 		},
 		randomNote: {
 			hint: "Today's pick",
@@ -2752,6 +2767,9 @@ export const en = {
 			tags: "Tags",
 			dayStreak: "Day streak",
 			daysUsing: "Days using Obsidian",
+			tasksOverdue: "Tasks overdue",
+			tasksPlanned: "Tasks planned",
+			hoursPlanned: "Hours planned",
 		},
 		web: {
 			openInBrowser: "Open in browser",

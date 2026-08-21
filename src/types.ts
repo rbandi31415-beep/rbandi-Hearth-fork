@@ -600,11 +600,33 @@ export interface SearchBarConfig {
 }
 
 /** Per-card configuration for a "heatmap" (activity) card. */
+/** A single heatmap metric — one bucketer, one legend. "combined" isn't one
+ * of these; it blends/splits a chosen set of them (see HeatmapConfig). */
+export type HeatmapMetric = "modified" | "created" | "commits" | "tasksCompleted";
+
 export interface HeatmapConfig {
-	/** Which timestamp to count. Default "modified". */
-	metric?: "modified" | "created";
+	/** Which timestamp to count, or "combined" to show several at once.
+	 * Default "modified". */
+	metric?: HeatmapMetric | "combined";
 	/** How many weeks back to show. Default 26. */
 	weeks?: number;
+	/** metric === "combined": which metrics to include. Default
+	 * modified+created+commits. */
+	combinedMetrics?: HeatmapMetric[];
+	/** metric === "combined": how to draw several metrics in one grid —
+	 * "split" divides each day's cell into one stripe per metric; "blended"
+	 * sums them into one composite intensity per day; "mixed" blends each
+	 * metric's own colour into one swatch per day, weighted by how active
+	 * that metric was that day. Default "split". */
+	combinedStyle?: "split" | "blended" | "mixed";
+	/** Custom color (hex, e.g. "#7c3aed") for single-metric mode and for
+	 * "blended" combined mode. Undefined uses the theme's accent color, as
+	 * before. */
+	color?: string;
+	/** metric === "combined", style "split"/"mixed": custom colors, one per
+	 * metric. A metric with no entry falls back to its built-in default (the
+	 * theme accent for "modified", a fixed hue for the others). */
+	metricColors?: Partial<Record<HeatmapMetric, string>>;
 }
 
 /** The built-in vault statistics a "stats" card can show. */
@@ -614,7 +636,10 @@ export type StatId =
 	| "folders"
 	| "tags"
 	| "dayStreak"
-	| "daysUsing";
+	| "daysUsing"
+	| "tasksOverdue"
+	| "tasksPlanned"
+	| "hoursPlanned";
 
 /** The built-in stats in their default display order — the fixed layout a
  * "stats" card has always shown, kept in one place so a card with no advanced
@@ -632,7 +657,7 @@ export const DEFAULT_STATS: StatId[] = [
  * DEFAULT_STATS with opt-in stats a user can turn on in advanced mode. Must
  * begin with DEFAULT_STATS in the same order so "all defaults selected" round
  * trips back to the unconfigured (undefined) state. */
-export const ALL_STATS: StatId[] = [...DEFAULT_STATS, "daysUsing"];
+export const ALL_STATS: StatId[] = [...DEFAULT_STATS, "daysUsing", "tasksOverdue", "tasksPlanned", "hoursPlanned"];
 
 /** Lucide icon id (Obsidian setIcon) for each built-in stat. Shared by the card
  * renderer and its editor so the tile icon and the editor chip never drift. */
@@ -643,6 +668,9 @@ export const STAT_ICONS: Record<StatId, string> = {
 	tags: "tag",
 	dayStreak: "flame",
 	daysUsing: "calendar-clock",
+	tasksOverdue: "alarm-clock",
+	tasksPlanned: "calendar-check",
+	hoursPlanned: "hourglass",
 };
 
 /** A user-defined stat tile that counts the files matching a query. */
@@ -674,6 +702,11 @@ export interface StatsConfig {
 	attachmentTypes?: string[];
 	/** User-defined query-count tiles. Only consulted when `advanced` is on. */
 	queries?: StatsQuery[];
+	/** Shrink tile icon/text size just enough that every tile fits the card
+	 * without scrolling, however many are selected. Off (default) keeps tiles
+	 * at their normal size, which can overflow a small card once enough are
+	 * turned on. */
+	fitToCard?: boolean;
 }
 
 /** On-screen keypad tier for a calculator card. "none" hides the pad (just the
@@ -1264,6 +1297,9 @@ export interface DashboardCard {
 	 * their subfolders) — pooled together. Undefined/empty means the whole
 	 * vault. */
 	randomNoteFolders?: string[];
+	/** kind === "randomNote": show the file-type icon above the note name.
+	 * Default true; explicit false hides it. */
+	randomNoteShowIcon?: boolean;
 	/** kind === "question": the question pool, picked from deterministically by
 	 * today's date. Undefined/empty falls back to the built-in default list.
 	 * Ignored while questionNote is set — the note is the pool then. */

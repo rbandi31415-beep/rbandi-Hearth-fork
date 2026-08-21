@@ -1390,6 +1390,11 @@
 	pointer-events: none;
 }
 
+.hearth-card-actions-overlay.is-bottom-right {
+	top: auto;
+	bottom: 6px;
+}
+
 .hearth-open-btn {
 	pointer-events: auto;
 	display: flex;
@@ -5226,8 +5231,13 @@
 /* Vault statistics card */
 .hearth-stats {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
-	gap: 10px;
+	/* The column-width floor scales down with everything else — smaller tiles
+	 * fitting more columns per row is what actually shrinks the row count on
+	 * a wide-but-short card (see fitStatsToCard, which steps this rather than
+	 * computing one ratio, precisely because changing it changes the column
+	 * count too). */
+	grid-template-columns: repeat(auto-fit, minmax(calc(70px * var(--stat-scale, 1)), 1fr));
+	gap: calc(10px * var(--stat-scale, 1));
 	height: 100%;
 	align-content: center;
 }
@@ -5237,7 +5247,7 @@
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	gap: 4px;
+	gap: calc(4px * var(--stat-scale, 1));
 	text-align: center;
 }
 
@@ -5246,14 +5256,19 @@
 	color: var(--text-muted);
 }
 
+.hearth-stat-icon .svg-icon {
+	width: calc(16px * var(--stat-scale, 1));
+	height: calc(16px * var(--stat-scale, 1));
+}
+
 .hearth-stat-value {
-	font-size: 1.3rem;
+	font-size: calc(1.3rem * var(--stat-scale, 1));
 	font-weight: 700;
 	color: var(--text-normal);
 }
 
 .hearth-stat-label {
-	font-size: 0.72rem;
+	font-size: calc(0.72rem * var(--stat-scale, 1));
 	color: var(--text-faint);
 }
 
@@ -7066,8 +7081,8 @@ body.hearth-dv-resizing {
 /* ---- Activity heatmap card ------------------------------------------ */
 .hearth-heatmap {
 	display: flex;
-	flex-direction: column;
-	gap: 8px;
+	flex-direction: row;
+	gap: 10px;
 	height: 100%;
 }
 
@@ -7077,7 +7092,8 @@ body.hearth-dv-resizing {
 	grid-template-rows: repeat(7, 1fr);
 	gap: 3px;
 	flex: 1;
-	min-height: 0;
+	min-width: 0;
+	height: 100%;
 	overflow: hidden;
 }
 
@@ -7097,33 +7113,69 @@ body.hearth-dv-resizing {
 	background: transparent;
 }
 
-.hearth-heatmap-cell.has-heat {
-	background-color: hsla(
-		var(--accent-h),
-		var(--accent-s),
-		var(--accent-l),
-		calc(0.15 + var(--heat, 0) * 0.2125)
-	);
+/* Every visible (non-future) day is clickable — creates/opens its daily note
+ * — regardless of whether it had any activity, so the cursor says so
+ * uniformly rather than only over cells with a heat color. */
+.hearth-heatmap-cell:not(.is-empty) {
 	cursor: pointer;
 }
 
-.hearth-heatmap-legend {
+.hearth-heatmap-cell.is-split {
 	display: flex;
+	gap: 1px;
+	overflow: hidden;
+	background: transparent;
+}
+
+.hearth-heatmap-stripe {
+	flex: 1;
+	min-width: 0;
+	border-radius: 1px;
+	background: var(--background-modifier-border);
+}
+
+/* The legend: one column, left of the grid (DOM order stays grid-then-legend
+ * since the peaks/colors it needs are only known once the grid is about to
+ * be painted; `order` puts it first visually without needing to reorder the
+ * actual render code). One or more entries stack vertically inside it.
+ *
+ * Fixed width, not content-sized: the number is plain text whose width
+ * depends on its digit count, which is different on basically every card
+ * (it's each metric's peak count). A content-sized column would put the
+ * grid's left edge — and so every day-column — at a different X on every
+ * card, which is what made two same-width heatmaps stop lining up when
+ * stacked. Fixed width keeps that edge in the same place regardless. */
+.hearth-heatmap-legend-group {
+	order: -1;
+	flex: 0 0 28px;
+	width: 28px;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 10px;
+}
+
+.hearth-heatmap-legend-entry {
+	display: flex;
+	flex-direction: column;
 	align-items: center;
 	gap: 3px;
-	justify-content: flex-end;
-	font-size: 0.7rem;
+}
+
+.hearth-heatmap-legend-number {
+	font-size: 0.68rem;
 	color: var(--text-faint);
+	line-height: 1;
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
-.hearth-heatmap-legend .hearth-heatmap-cell {
-	width: 11px;
-	height: 11px;
-	aspect-ratio: auto;
-}
-
-.hearth-heatmap-legend-label {
-	margin: 0 3px;
+.hearth-heatmap-legend-swatch {
+	width: 14px;
+	height: 14px;
+	border-radius: 3px;
 }
 
 /* ---- Web card: external-open button & framing fallback -------------- */

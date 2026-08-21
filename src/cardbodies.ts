@@ -86,9 +86,11 @@ export function cardOverlayButton(
 	icon: string,
 	label: string,
 	onClick: (evt: MouseEvent) => void,
+	corner: "top-right" | "bottom-right" = "top-right",
 ): HTMLButtonElement {
 	const cardEl = body.closest(".hearth-card");
 	const overlay = (cardEl ?? body).createDiv("hearth-card-actions-overlay");
+	if (corner === "bottom-right") overlay.addClass("is-bottom-right");
 	const button = overlay.createEl("button", {
 		cls: "hearth-open-btn",
 		attr: { "aria-label": label },

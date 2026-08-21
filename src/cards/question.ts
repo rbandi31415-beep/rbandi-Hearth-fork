@@ -85,10 +85,16 @@ function mountQuestion(body: HTMLElement, pool: string[], card: DashboardCard): 
 	};
 	draw();
 
-	cardOverlayButton(body, "refresh-cw", t().cards.question.refresh, () => {
-		offset = (offset + 1) % pool.length;
-		draw();
-	});
+	cardOverlayButton(
+		body,
+		"refresh-cw",
+		t().cards.question.refresh,
+		() => {
+			offset = (offset + 1) % pool.length;
+			draw();
+		},
+		"bottom-right",
+	);
 }
 
 /**

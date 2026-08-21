@@ -1022,6 +1022,70 @@ export function collectTaskNotesTasks(app: App, setup: TaskNotesSetup): TaskNote
 }
 
 
+/**
+ * Completion counts per local day, for the heatmap's "tasks completed"
+ * metric. A recurring task's completions are exact — `completeInstances`
+ * records the actual day. A one-off completed task has no stored completion
+ * date in TaskNotes' own data, only a done/not-done status, so it falls back
+ * to the note's last-modified day: usually close (you tend to save right
+ * after checking something off) but not exact — an edit made well after
+ * completion would misattribute the day. See DEFERRED_FEATURES.md for what a
+ * fully accurate version would need.
+ */
+export function tasksCompletedByDay(app: App): Map<string, number> {
+	const counts = new Map<string, number>();
+	if (!taskNotesEnabled(app)) return counts;
+	const setup = readTaskNotesSetup(app);
+	for (const task of collectTaskNotesTasks(app, setup)) {
+		if (task.completeInstances.length > 0) {
+			for (const d of task.completeInstances) {
+				const key = d.slice(0, 10);
+				counts.set(key, (counts.get(key) ?? 0) + 1);
+			}
+			continue;
+		}
+		if (!task.done) continue;
+		const file = app.vault.getAbstractFileByPath(task.path);
+		if (!(file instanceof TFile)) continue;
+		const key = localDayKey(file.stat.mtime);
+		counts.set(key, (counts.get(key) ?? 0) + 1);
+	}
+	return counts;
+}
+
+
+/**
+ * Counts (and planned hours) for the "tasks overdue" / "tasks planned" /
+ * "hours planned" stats: not-done tasks whose effective date (due, falling
+ * back to scheduled) is in the past or the future relative to today. A task
+ * with neither date counts as neither. `plannedMinutes` sums each planned
+ * task's timeEstimate, falling back to TaskNotes' own configured default for
+ * a task that carries none — the same fallback the calendar card already
+ * uses to size a timed task with no estimate.
+ */
+export function taskDateCounts(app: App): { overdue: number; planned: number; plannedMinutes: number } {
+	if (!taskNotesEnabled(app)) return { overdue: 0, planned: 0, plannedMinutes: 0 };
+	const setup = readTaskNotesSetup(app);
+	const today = localDayKey(Date.now());
+	let overdue = 0;
+	let planned = 0;
+	let plannedMinutes = 0;
+	for (const task of collectTaskNotesTasks(app, setup)) {
+		if (task.done || task.archived) continue;
+		const effective = task.due ?? task.scheduled;
+		if (!effective) continue;
+		const key = effective.slice(0, 10);
+		if (key < today) {
+			overdue++;
+		} else {
+			planned++;
+			plannedMinutes += task.timeEstimate ?? setup.defaultTimeEstimate;
+		}
+	}
+	return { overdue, planned, plannedMinutes };
+}
+
+
 /** Every timeblock in the vault, as calendar occurrences. Timeblocks live in
  * daily-note frontmatter, so the day comes from the note's own name via
  * `resolveDayKey` (the caller supplies the daily-notes format). */

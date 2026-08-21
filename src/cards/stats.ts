@@ -1,9 +1,10 @@
-import { getAllTags, setIcon, Setting, TFile, TFolder } from "obsidian";
+import { type Component, debounce, getAllTags, setIcon, Setting, TFile, TFolder } from "obsidian";
 import { dailyNotePath, dailyNotesOptions, moment, type Moment } from "../cardbodies";
 import { addResetButton, moveItem } from "../editors";
 import { FILE_TYPE_GROUPS, fileTypeLabel, FOLDERS_GROUP_ID, groupById, groupForFile } from "../filetypes";
 import { t } from "../i18n";
 import { countQuery } from "../query";
+import { taskDateCounts } from "../tasknotes";
 import { ALL_STATS, DEFAULT_STATS, STAT_ICONS, type DashboardCard, type StatId } from "../types";
 import { type HomeView } from "../view";
 import { type CardDefinition, type CardEditorContext } from "./definition";
@@ -17,7 +18,7 @@ import { type CardDefinition, type CardEditorContext } from "./definition";
  * With no advanced config the card shows its fixed default set. When the card's
  * `stats.advanced` flag is on the user picks which built-in stats appear, breaks
  * attachments out into per file-type tiles, and adds custom query counts. */
-export function renderStats(view: HomeView, card: DashboardCard, body: HTMLElement): void {
+export function renderStats(view: HomeView, card: DashboardCard, body: HTMLElement, component: Component): void {
 	const cfg = card.stats;
 	const advanced = cfg?.advanced ?? false;
 	const vault = view.app.vault;
@@ -60,6 +61,13 @@ export function renderStats(view: HomeView, card: DashboardCard, body: HTMLEleme
 		? Math.max(0, Math.floor((Date.now() - oldestCtime) / 86_400_000))
 		: 0;
 
+	const builtins = advanced && cfg?.builtins ? cfg.builtins : DEFAULT_STATS;
+	// Only walked when actually shown — a TaskNotes scan on top of the vault
+	// pass above, so it stays out of the fixed default card's cost.
+	const needsTaskCounts =
+		builtins.includes("tasksOverdue") || builtins.includes("tasksPlanned") || builtins.includes("hoursPlanned");
+	const taskCounts = needsTaskCounts ? taskDateCounts(view.app) : { overdue: 0, planned: 0, plannedMinutes: 0 };
+
 	const values: Record<StatId, number> = {
 		notes,
 		attachments,
@@ -67,12 +75,15 @@ export function renderStats(view: HomeView, card: DashboardCard, body: HTMLEleme
 		tags: tags.size,
 		dayStreak: 0,
 		daysUsing,
+		tasksOverdue: taskCounts.overdue,
+		tasksPlanned: taskCounts.planned,
+		// Rounded to one decimal place — a whole number of minutes almost never
+		// lands on a whole number of hours.
+		hoursPlanned: Math.round((taskCounts.plannedMinutes / 60) * 10) / 10,
 	};
 	const streak = dailyNoteStreak(view);
 
 	const grid = body.createDiv("hearth-stats");
-
-	const builtins = advanced && cfg?.builtins ? cfg.builtins : DEFAULT_STATS;
 	for (const id of builtins) {
 		// The day-streak tile only appears when daily notes are configured — same
 		// as it always has — whether or not it's explicitly selected.
@@ -83,21 +94,23 @@ export function renderStats(view: HomeView, card: DashboardCard, body: HTMLEleme
 		addStat(grid, STAT_ICONS[id], values[id], t().cards.stats[id]);
 	}
 
-	if (!advanced) return;
+	if (advanced) {
+		// Attachment breakdown: one tile per selected file-type group.
+		for (const groupId of cfg?.attachmentTypes ?? []) {
+			const group = groupById(groupId);
+			if (!group) continue;
+			addStat(grid, group.icon, byType.get(groupId) ?? 0, fileTypeLabel(group));
+		}
 
-	// Attachment breakdown: one tile per selected file-type group.
-	for (const groupId of cfg?.attachmentTypes ?? []) {
-		const group = groupById(groupId);
-		if (!group) continue;
-		addStat(grid, group.icon, byType.get(groupId) ?? 0, fileTypeLabel(group));
+		// Custom query counts.
+		for (const q of cfg?.queries ?? []) {
+			const query = q.query?.trim();
+			if (!query) continue;
+			addStat(grid, q.icon?.trim() || "hash", countQuery(view.app, query), q.label?.trim() || query);
+		}
 	}
 
-	// Custom query counts.
-	for (const q of cfg?.queries ?? []) {
-		const query = q.query?.trim();
-		if (!query) continue;
-		addStat(grid, q.icon?.trim() || "hash", countQuery(view.app, query), q.label?.trim() || query);
-	}
+	if (cfg?.fitToCard) fitStatsToCard(component, body, grid);
 }
 
 
@@ -106,6 +119,42 @@ function addStat(grid: HTMLElement, icon: string, value: number, label: string):
 	setIcon(cell.createDiv("hearth-stat-icon"), icon);
 	cell.createDiv({ cls: "hearth-stat-value", text: String(value) });
 	cell.createDiv({ cls: "hearth-stat-label", text: label });
+}
+
+
+/**
+ * Shrinks tiles — icon/text size, gaps, and the grid's minimum column width
+ * — via a --stat-scale custom property every one of those is defined
+ * against, just enough that every stat tile fits the card without scrolling.
+ * Handy once "Advanced" and a stack of custom stats push the grid past what
+ * a single view of the card shows.
+ *
+ * Shrinking the column width too (not just row height) matters: it's what
+ * lets more tiles fit per row as they shrink, which is the only thing that
+ * actually reduces the row count on a card that's wide but short. That also
+ * rules out a one-shot ratio (unlike a purely vertical shrink, smaller tiles
+ * change the column count in discrete steps, not continuously), so this
+ * steps the scale down and re-measures until it fits or hits the floor.
+ *
+ * Recomputes on resize (dragging the card, or the window) and stops
+ * watching once this render is torn down.
+ */
+function fitStatsToCard(component: Component, body: HTMLElement, grid: HTMLElement): void {
+	const FLOOR = 0.5;
+	const STEP = 0.05;
+	const fit = (): void => {
+		let scale = 1;
+		grid.style.removeProperty("--stat-scale");
+		if (body.clientHeight <= 0) return;
+		while (scale > FLOOR && grid.scrollHeight > body.clientHeight) {
+			scale = Math.max(FLOOR, scale - STEP);
+			grid.style.setProperty("--stat-scale", String(scale));
+		}
+	};
+	fit();
+	const observer = new ResizeObserver(debounce(fit, 60, true));
+	observer.observe(body);
+	component.register(() => observer.disconnect());
 }
 
 
@@ -154,6 +203,17 @@ export function statsEditor(ctx: CardEditorContext, containerEl: HTMLElement): v
 		);
 
 	if (!cfg.advanced) return;
+
+	new Setting(containerEl)
+		.setName(t().editors.stats.fitToCard)
+		.setDesc(t().editors.stats.fitToCardDesc)
+		.addToggle((tg) =>
+			tg.setValue(cfg.fitToCard ?? false).onChange((v) => {
+				cfg.fitToCard = v || undefined;
+				ctx.opts.save();
+				ctx.requestRender();
+			}),
+		);
 
 	// ---- Which built-in stats to show --------------------------------------
 	new Setting(containerEl).setName(t().editors.stats.builtins).setHeading();
@@ -320,7 +380,7 @@ export const statsCard: CardDefinition<"stats"> = {
 	templates: [
 		{ id: "stats", name: "Vault statistics", icon: "bar-chart-3", build: () => ({ kind: "stats", title: "Stats", w: 4, h: 2 }) },
 	],
-	render: (view, card, body) => renderStats(view, card, body),
+	render: (view, card, body, component) => renderStats(view, card, body, component),
 	renderEditor: (container, ctx) => statsEditor(ctx, container),
 	cloneConfig: (source, copy) => {
 		if (source.stats)
