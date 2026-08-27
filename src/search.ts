@@ -1,8 +1,16 @@
 import { Command, Component, debounce, Platform, setIcon, TAbstractFile, TFile, TFolder } from "obsidian";
 import type { HomeView } from "./view";
 import { applyFileIcon, fileIconOptions, resolveFileIcon, type ResolvedIcon } from "./fileicons";
-import { FILE_TYPE_GROUPS, FileTypeGroup, fileTypeLabel, groupForFile, OTHER_GROUP_ID } from "./filetypes";
 import {
+	FILE_TYPE_GROUPS,
+	FileTypeGroup,
+	fileTypeLabel,
+	groupForFile,
+	MARKDOWN_GROUP_ID,
+	OTHER_GROUP_ID,
+} from "./filetypes";
+import {
+	anyFileTypeIncluded,
 	mergeRanked,
 	QueryFilter,
 	QueryHit,
@@ -28,17 +36,25 @@ const COMMAND_PREFIX = ">";
 let resultsIdSeq = 0;
 
 /**
- * The search field + auto-detected file-type filter chips + results dropdown.
- * Searches the whole vault (Obsidian's vault index already excludes the
- * .obsidian config folder). A leading "#" searches tags, "key:value" searches
- * frontmatter, ">" runs commands; otherwise names/paths (and, optionally, note
- * bodies) are matched.
+ * The search field + an auto-detected file-type filter menu + results
+ * dropdown. Searches the whole vault (Obsidian's vault index already excludes
+ * the .obsidian config folder). A leading "#" searches tags, "key:value"
+ * searches frontmatter, ">" runs commands; otherwise names/paths (and,
+ * optionally, note bodies) are matched.
  */
 export class SearchSection {
 	private view: HomeView;
-	private activeFilter: string | null = null;
+	/** Group ids left out of the results — a plain Set rather than a single
+	 * "active" id, so several types can be excluded at once (e.g. "everything
+	 * except videos and audio"), the way Obsidian's graph-view filters combine
+	 * rather than picking one exclusive option. Empty means no restriction. */
+	private excludedGroups: Set<string> = new Set();
 
 	private inputEl!: HTMLInputElement;
+	/** The search bar element, kept so the filter toggle button can be appended
+	 * into it once results/filters are rendered (see renderFilterMenu). */
+	private barEl: HTMLElement | null = null;
+	private filterDetailsEl: HTMLDetailsElement | null = null;
 	private resultsEl!: HTMLElement;
 	private resultsId = `hearth-results-${resultsIdSeq++}`;
 	/** The whole search section (bar + results + filters) — used to decide when
@@ -64,6 +80,7 @@ export class SearchSection {
 	 * rather than leaving the bar unlabelled. */
 	renderBar(parent: HTMLElement, opts: { placeholder?: string } = {}): HTMLElement {
 		const bar = parent.createDiv("hearth-search-bar");
+		this.barEl = bar;
 		const icon = bar.createDiv("hearth-search-icon");
 		setIcon(icon, "search");
 
@@ -86,7 +103,10 @@ export class SearchSection {
 		// Typing is debounced so large vaults aren't re-scanned on every keystroke;
 		// focus (which just offers recent files) stays instant.
 		this.inputEl.addEventListener("input", () => this.updateDebounced());
-		this.inputEl.addEventListener("focus", () => this.update());
+		this.inputEl.addEventListener("focus", () => {
+			this.closeFilterMenu();
+			this.update();
+		});
 		this.inputEl.addEventListener("keydown", (e) => this.onKeyDown(e));
 
 		// On mobile, focusing the field pops the on-screen keyboard. Flag it
@@ -127,11 +147,14 @@ export class SearchSection {
 	}
 
 	/** Renders the results dropdown (as an overlay inside `overlayParent`, which
-	 * must be positioned) and the filter chip row (under `boundary`). `boundary`
-	 * wraps the whole search section and is the click-outside dismissal area.
-	 * `filters: false` leaves the chip row out entirely, and `hiddenFilters`
-	 * drops individual chips from it (the search-bar card offers both; the
-	 * header always shows the full row). */
+	 * must be positioned) and, into the search bar itself, the filter toggle
+	 * button — a small icon button that opens a popover of type checkboxes,
+	 * along the lines of Obsidian's own graph-view filters. `boundary` wraps the
+	 * whole search section and is the click-outside dismissal area for both the
+	 * results dropdown and the filter popover. `filters: false` leaves the
+	 * toggle button out entirely, and `hiddenFilters` drops individual types
+	 * from its menu (the search-bar card offers both; the header always shows
+	 * the full menu). */
 	renderResultsAndFilters(
 		overlayParent: HTMLElement,
 		boundary: HTMLElement,
@@ -144,14 +167,17 @@ export class SearchSection {
 		this.resultsEl.id = this.resultsId;
 		this.resultsEl.setAttribute("role", "listbox");
 		this.resultsEl.hide();
-		if (opts.filters !== false) this.renderFilters(boundary);
+		if (opts.filters !== false && this.barEl) this.renderFilterMenu(this.barEl);
 
-		// Close the dropdown when clicking outside the whole search section.
-		// Registered on the per-render component (not the long-lived view) so it's
-		// torn down on every re-render instead of accumulating a stale listener
-		// each time the view is rebuilt.
+		// Close the dropdown and the filter popover when clicking outside the
+		// whole search section. Registered on the per-render component (not the
+		// long-lived view) so it's torn down on every re-render instead of
+		// accumulating a stale listener each time the view is rebuilt.
 		component.registerDomEvent(this.view.containerEl.ownerDocument, "click", (e) => {
-			if (!boundary.contains(e.target as Node)) this.hide();
+			if (!boundary.contains(e.target as Node)) {
+				this.hide();
+				this.closeFilterMenu();
+			}
 		});
 
 		// On mobile the on-screen keyboard resizes the visual viewport as it
@@ -171,7 +197,7 @@ export class SearchSection {
 
 	// ---- Filters --------------------------------------------------------
 
-	/** Chips this instance leaves out on top of the vault-wide ones, set by the
+	/** Types this instance leaves out on top of the vault-wide ones, set by the
 	 * search-bar card (which can hide them per card). */
 	private hiddenFilters: string[] = [];
 
@@ -195,7 +221,7 @@ export class SearchSection {
 			if (!g || g.id === OTHER_GROUP_ID) hasOther = true;
 			if (hasFolders && present.size >= allNonFolderGroups) break;
 		}
-		// Vault-wide hides come first and always win: a chip switched off in
+		// Vault-wide hides come first and always win: a type switched off in
 		// Settings → Filters stays off everywhere, a card can only hide more.
 		const hidden = new Set([...this.view.plugin.settings.hiddenFilters, ...this.hiddenFilters]);
 		return FILE_TYPE_GROUPS.filter((g) => {
@@ -206,46 +232,83 @@ export class SearchSection {
 		});
 	}
 
-	private renderFilters(parent: HTMLElement): void {
+	/**
+	 * Renders the filter toggle button into the search bar and, inside it, a
+	 * `<details>` popover of one checkbox per detected file type — the same
+	 * disclosure pattern the Jira card's own filter menus already use (see
+	 * `.hearth-jira-filter` in styles.css), and the closest fit in this
+	 * codebase to Obsidian's graph-view filters: a compact button that opens a
+	 * panel of independent toggles rather than a row of exclusive icon chips.
+	 * Unlike the old chip row, any combination of types can be excluded at
+	 * once — checking a box shows that type, unchecking it hides it, and
+	 * leaving everything checked (the default) applies no restriction at all.
+	 */
+	private renderFilterMenu(bar: HTMLElement): void {
 		const groups = this.detectGroups();
 		if (groups.length === 0) return;
 
-		const row = parent.createDiv("hearth-filters");
-		// The column-gap splits the row's leftover space between the chips, so
-		// the stylesheet needs the chip count. We know it exactly here, so set
-		// it directly: deriving it in CSS took a ladder of :has() rules, which
-		// carries a broad selector-invalidation cost and capped out at 14 chips.
-		row.style.setProperty("--n", String(groups.length));
+		const details = bar.createEl("details", { cls: "hearth-search-filter" });
+		this.filterDetailsEl = details;
+		const summary = details.createEl("summary", {
+			cls: "hearth-search-filter-toggle",
+			attr: { "aria-label": t().search.filterAria },
+		});
+		setIcon(summary, "sliders-horizontal");
+		details.addEventListener("toggle", () => {
+			summary.setAttribute("aria-expanded", String(details.open));
+			// Opening the filter popover while the results dropdown is showing
+			// crowds a narrow bar; typing to search again closes it (see the
+			// input's focus listener) so this only ever trades one overlay for
+			// the other, never stacks both.
+			if (details.open) this.hide();
+		});
+
+		const menu = details.createDiv("hearth-search-filter-menu");
+		const header = menu.createDiv("hearth-search-filter-header");
+		header.createSpan({ cls: "hearth-search-filter-heading", text: t().search.filterHeading });
+		const reset = header.createEl("button", {
+			cls: "hearth-search-filter-reset",
+			text: t().search.filterReset,
+			attr: { type: "button" },
+		});
+
+		const repaintActiveState = () => {
+			const active = this.excludedGroups.size > 0;
+			summary.toggleClass("has-active", active);
+			reset.toggleClass("is-visible", active);
+		};
+		repaintActiveState();
+
+		const options = menu.createDiv("hearth-search-filter-options");
 		for (const group of groups) {
-			const chip = row.createDiv("hearth-filter");
-			chip.toggleClass("is-active", this.activeFilter === group.id);
-			setIcon(chip.createDiv("hearth-filter-icon"), group.icon);
-			chip.setAttribute("aria-label", fileTypeLabel(group));
-			chip.setAttribute("role", "button");
-			chip.setAttribute("tabindex", "0");
-			chip.setAttribute("aria-pressed", String(this.activeFilter === group.id));
-			const toggle = () => {
-				this.activeFilter = this.activeFilter === group.id ? null : group.id;
-				parent.querySelectorAll(".hearth-filter").forEach((c) => {
-					c.removeClass("is-active");
-					c.setAttribute("aria-pressed", "false");
-				});
-				const on = this.activeFilter === group.id;
-				chip.toggleClass("is-active", on);
-				chip.setAttribute("aria-pressed", String(on));
+			const option = options.createEl("label", { cls: "hearth-search-filter-option" });
+			const input = option.createEl("input", { attr: { type: "checkbox" } });
+			input.checked = !this.excludedGroups.has(group.id);
+			setIcon(option.createDiv("hearth-search-filter-option-icon"), group.icon);
+			option.createSpan({ text: fileTypeLabel(group) });
+			input.addEventListener("change", () => {
+				if (input.checked) this.excludedGroups.delete(group.id);
+				else this.excludedGroups.add(group.id);
+				repaintActiveState();
 				this.update();
-				// On desktop, refocus the field for quick typing; on mobile this
-				// would pop the on-screen keyboard and cover the results, so skip.
-				if (!Platform.isMobile) this.inputEl.focus();
-			};
-			chip.addEventListener("click", toggle);
-			chip.addEventListener("keydown", (e) => {
-				if (e.key === "Enter" || e.key === " ") {
-					e.preventDefault();
-					toggle();
-				}
 			});
 		}
+
+		reset.addEventListener("click", () => {
+			this.excludedGroups.clear();
+			options.querySelectorAll<HTMLInputElement>("input").forEach((cb) => {
+				cb.checked = true;
+			});
+			repaintActiveState();
+			this.update();
+		});
+	}
+
+	/** Closes the filter popover without touching which types are excluded —
+	 * called when the results dropdown closes so the two overlays never linger
+	 * open across a re-render or an outside click. */
+	private closeFilterMenu(): void {
+		if (this.filterDetailsEl) this.filterDetailsEl.open = false;
 	}
 
 	// ---- Searching ------------------------------------------------------
@@ -261,27 +324,24 @@ export class SearchSection {
 			return;
 		}
 
-		if (!query && !this.activeFilter) {
+		if (!query && this.excludedGroups.size === 0) {
 			this.renderHistory();
 			return;
 		}
 
-		const filter: QueryFilter = {
-			includeFolders: !this.activeFilter || this.activeFilter === "folders",
-			includeFiles: this.activeFilter !== "folders",
-			groupId: this.activeFilter && this.activeFilter !== "folders" ? this.activeFilter : null,
-		};
+		const filter: QueryFilter = { excludeGroupIds: this.excludedGroups };
 
 		// Omnisearch mode: hand plain queries to the Omnisearch plugin instead of
 		// the built-in engine. It only runs when the plugin is actually available;
 		// otherwise (and for tag/property syntax, which Omnisearch doesn't use) we
-		// fall through to the built-in search below. The folders chip also stays
-		// with the built-in engine: Omnisearch indexes notes only, so routing a
-		// folder query to it would turn every search into "no matches".
+		// fall through to the built-in search below. A filter that excludes every
+		// file type also stays with the built-in engine: Omnisearch indexes notes
+		// only, so routing a folders-only query to it would turn every search
+		// into "no matches".
 		if (
 			this.view.plugin.settings.searchEngine === "omnisearch" &&
 			query &&
-			filter.includeFiles &&
+			anyFileTypeIncluded(filter) &&
 			isOmnisearchAvailable(this.view.app)
 		) {
 			this.runOmnisearch(query, filter);
@@ -293,8 +353,15 @@ export class SearchSection {
 
 		// Full-text body search runs after the instant name results and appends
 		// any note whose body matched but whose name didn't. Guarded by generation
-		// so a stale async result never overwrites a newer query's results.
-		if (this.view.plugin.settings.searchContents && query && !this.activeFilter) {
+		// so a stale async result never overwrites a newer query's results. It
+		// only makes sense while notes themselves aren't filtered out — unlike
+		// the old exclusive chip, excluding some *other* type (say, videos) no
+		// longer suppresses it too.
+		if (
+			this.view.plugin.settings.searchContents &&
+			query &&
+			!this.excludedGroups.has(MARKDOWN_GROUP_ID)
+		) {
 			const gen = this.generation;
 			const exclude = new Set(hits.map((h) => h.file.path));
 			void searchFileContents(this.view.app, query, {

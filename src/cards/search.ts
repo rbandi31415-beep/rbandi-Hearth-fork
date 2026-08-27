@@ -2,6 +2,7 @@ import { Setting, TFile } from "obsidian";
 import { emptyState } from "../cardbodies";
 import { addResetButton } from "../editors";
 import { applyFileIcon, fileIconOptions, resolveFileIcon } from "../fileicons";
+import { FOLDERS_GROUP_ID } from "../filetypes";
 import { t } from "../i18n";
 import { openFile } from "../opener";
 import {
@@ -35,7 +36,7 @@ export function renderSavedSearch(view: HomeView, card: DashboardCard, body: HTM
 	// render as a row that looks clickable and then does nothing.
 	const hits = runQuery(view.app, query, {
 		limit,
-		filter: { includeFolders: false, includeFiles: true, groupId: null },
+		filter: { excludeGroupIds: new Set([FOLDERS_GROUP_ID]) },
 	});
 
 	const render = (all: QueryHit[]) => {

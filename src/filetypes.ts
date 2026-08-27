@@ -2,8 +2,9 @@ import { TAbstractFile, TFile, TFolder } from "obsidian";
 import { t } from "./i18n";
 
 /**
- * A logical group of file types shown as a search filter chip.
- * Similar formats are grouped together (e.g. docx + odt under "Documents").
+ * A logical group of file types offered as one filter option (in the search
+ * bar's filter menu, and in a few cards' own type filters). Similar formats
+ * are grouped together (e.g. docx + odt under "Documents").
  */
 export interface FileTypeGroup {
 	id: string;
@@ -15,6 +16,7 @@ export interface FileTypeGroup {
 }
 
 export const FOLDERS_GROUP_ID = "folders";
+export const MARKDOWN_GROUP_ID = "markdown";
 export const EXCALIDRAW_GROUP_ID = "excalidraw";
 export const IMAGES_GROUP_ID = "images";
 export const OTHER_GROUP_ID = "other";
@@ -120,8 +122,8 @@ const FILE_TYPE_LABEL_KEYS: Record<string, keyof ReturnType<typeof t>["fileTypes
 	other: "other",
 };
 
-/** The localized filter-chip label for a group. Falls back to the English
- * `label` baked into the group when a locale is missing the key. */
+/** The localized filter label for a group. Falls back to the English `label`
+ * baked into the group when a locale is missing the key. */
 export function fileTypeLabel(group: FileTypeGroup): string {
 	const key = FILE_TYPE_LABEL_KEYS[group.id];
 	return key ? t().fileTypes[key] : group.label;

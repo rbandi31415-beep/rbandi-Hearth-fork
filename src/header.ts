@@ -79,12 +79,13 @@ export function renderHeader(view: HomeView, container: HTMLElement, component: 
 	// Layout:
 	//   searchWrap (flex row, align-items: flex-start)
 	//     ├─ searchCol (flex:1) — the bar's width
-	//     │     ├─ searchRow (the bar + (nothing else))
-	//     │     └─ filter chips + results dropdown (matching the bar's width)
+	//     │     ├─ searchRow (the bar, which carries the filter toggle button
+	//     │     │   at its right edge — see SearchSection.renderFilterMenu)
+	//     │     └─ results dropdown (matching the bar's width)
 	//     └─ New-note button (beside the bar, top-aligned, flush)
 	// The button is a sibling of the column (not inside the bar's row) so the
-	// filters span only the bar's width; the button sits flush beside the bar,
-	// not pushed down among the filter chips.
+	// results dropdown spans only the bar's width; the button sits flush beside
+	// the bar, not pushed down among the results.
 	const searchWrap = container.createDiv("hearth-search-wrap");
 	const searchCol = searchWrap.createDiv("hearth-search-col");
 	const searchRow = searchCol.createDiv("hearth-search");

@@ -580,12 +580,12 @@ export interface SavedSearchConfig {
 
 /** Per-card configuration for a "searchbar" (live search field) card. */
 export interface SearchBarConfig {
-	/** Show the auto-detected file-type filter chips under the field, exactly as
-	 * the header search bar does. Default false — the chips are the opt-in
-	 * extra here, and they need a taller card to sit in. */
+	/** Show the auto-detected file-type filter button in the field, exactly as
+	 * the header search bar does. Default false — the button is the opt-in
+	 * extra here. */
 	filters?: boolean;
 	/** File-type group ids (see FILE_TYPE_GROUPS) this card leaves out of its
-	 * chip row, on top of the ones hidden vault-wide in Settings → Filters. */
+	 * filter menu, on top of the ones hidden vault-wide in Settings → Filters. */
 	hiddenFilters?: string[];
 	/** Placeholder shown in the empty field. Blank or omitted falls back to the
 	 * global one (Settings → Appearance → Search placeholder). */

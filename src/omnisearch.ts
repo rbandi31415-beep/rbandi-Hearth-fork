@@ -1,7 +1,7 @@
 import { App, TFile } from "obsidian";
 import { cleanExcerptText, foldForMatch, highlightRanges, windowExcerpt } from "./excerpt";
 import { groupForFile } from "./filetypes";
-import { QueryFilter, QueryHit } from "./query";
+import { anyFileTypeIncluded, QueryFilter, QueryHit } from "./query";
 
 /** The community-plugin id Omnisearch registers itself under. */
 export const OMNISEARCH_PLUGIN_ID = "omnisearch";
@@ -96,9 +96,9 @@ function markedWords(excerpt: string): string[] {
  * "Omnisearch is broken" should fall back to the built-in engine instead of
  * rendering a misleading empty state.
  *
- * The active file-type filter (and folder/file toggles) is applied to the
- * returned notes so the filter chips keep working; Omnisearch only indexes
- * notes, so folder-only filters yield nothing.
+ * The active file-type exclusions are applied to the returned notes so the
+ * filter menu keeps working; Omnisearch only indexes notes, so a filter that
+ * excludes every file type yields nothing.
  */
 export async function searchWithOmnisearch(
 	app: App,
@@ -116,13 +116,15 @@ export async function searchWithOmnisearch(
 	}
 
 	const { filter } = opts;
-	// Omnisearch indexes notes only, so a folders-only filter can never match.
-	if (!filter.includeFiles) return [];
+	// Omnisearch indexes notes only, so a filter that excludes every file type
+	// (i.e. only folders are wanted) can never match anything it returns.
+	if (!anyFileTypeIncluded(filter)) return [];
 	const hits: QueryHit[] = [];
 	for (const result of results) {
 		const file = app.vault.getAbstractFileByPath(result.path);
 		if (!(file instanceof TFile)) continue;
-		if (filter.groupId && groupForFile(file)?.id !== filter.groupId) continue;
+		const group = groupForFile(file);
+		if (group && filter.excludeGroupIds.has(group.id)) continue;
 		// Single characters match almost everywhere; highlighting them speckles
 		// the row without saying anything about why it matched.
 		const words = result.foundWords.filter((w) => w.length > 1);

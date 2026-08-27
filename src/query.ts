@@ -1,6 +1,6 @@
 import { App, getAllTags, prepareFuzzySearch, TAbstractFile, TFile, TFolder } from "obsidian";
 import { buildExcerpt, foldForMatch, highlightRanges } from "./excerpt";
-import { groupForFile } from "./filetypes";
+import { FILE_TYPE_GROUPS, FOLDERS_GROUP_ID, groupForFile } from "./filetypes";
 
 /** Shown instead of the folder path to say *why* a file matched. */
 export interface QueryBadge {
@@ -29,12 +29,23 @@ export interface QueryHit {
 	matches?: [number, number][];
 }
 
-/** Which file-type group (and folders) a query is restricted to. */
+/**
+ * Which file-type groups (folders included — see FOLDERS_GROUP_ID) a query
+ * leaves out. Unlike the old single-`groupId` shape, several groups can be
+ * excluded at once — e.g. "everything except videos and audio" — which a
+ * single required group could never express. Empty means no restriction.
+ */
 export interface QueryFilter {
-	includeFolders: boolean;
-	includeFiles: boolean;
-	/** File-type group id to require, or null for any. */
-	groupId: string | null;
+	excludeGroupIds: ReadonlySet<string>;
+}
+
+/** Whether any file (as opposed to only folders) could pass this filter — used
+ * to decide whether it's worth routing a query to an engine that only ever
+ * returns files (Omnisearch indexes notes, never folders). */
+export function anyFileTypeIncluded(filter: QueryFilter): boolean {
+	return FILE_TYPE_GROUPS.some(
+		(g) => g.id !== FOLDERS_GROUP_ID && !filter.excludeGroupIds.has(g.id),
+	);
 }
 
 /** Property keys are matched as plain identifiers followed by a colon — a shape
@@ -58,7 +69,7 @@ export function formatPropertyValue(v: unknown): string {
 	return JSON.stringify(v);
 }
 
-const NO_FILTER: QueryFilter = { includeFolders: true, includeFiles: true, groupId: null };
+const NO_FILTER: QueryFilter = { excludeGroupIds: new Set() };
 
 /**
  * Ranking bands for a name query, applied before any score.
@@ -172,11 +183,13 @@ function searchByName(app: App, query: string, filter: QueryFilter, limit: numbe
 	const candidates: TAbstractFile[] = [];
 	for (const f of app.vault.getAllLoadedFiles()) {
 		if (f instanceof TFolder) {
-			if (filter.includeFolders && f.path !== "/") candidates.push(f);
+			if (f.path === "/") continue;
+			if (filter.excludeGroupIds.has(FOLDERS_GROUP_ID)) continue;
+			candidates.push(f);
 			continue;
 		}
-		if (!filter.includeFiles) continue;
-		if (filter.groupId && groupForFile(f)?.id !== filter.groupId) continue;
+		const group = groupForFile(f);
+		if (group && filter.excludeGroupIds.has(group.id)) continue;
 		candidates.push(f);
 	}
 

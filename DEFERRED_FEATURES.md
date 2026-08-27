@@ -54,21 +54,6 @@ Two implementation paths:
 A heatmap-density layer on top (more visits = more intense) is explicitly a
 later step once the base map exists, per the original discussion.
 
-## Hide the search-bar filter-row icons
-
-The auto-detected file-type filter row under the search bar (header and the
-search-bar card) is icon-only today — each chip has no visible text, only a
-screen-reader label. "Remove the icons" therefore needs a decision about what
-(if anything) replaces them:
-
-- **Hide the whole row.** Simplest, and genuinely new as a *header* setting
-  (the separate search-bar card already has its own `filters` toggle; the
-  header currently always shows the row with no way to turn it off).
-- **Swap icons for text-label pills** ("Notes", "Images", …). Keeps the
-  filters usable without icons, but needs layout work — the chip row's
-  spacing (`--n` column-gap trick in search.ts/styles.css) is currently sized
-  around icon-only chips, not text.
-
 ## Related accuracy note (not deferred, just flagged)
 
 The new "tasks completed" heatmap metric hits a smaller version of the same

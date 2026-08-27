@@ -18,9 +18,10 @@ import { type CardDefinition, type CardEditorContext } from "./definition";
  * button beside it is the header's button too, in either of its modes.
  *
  * The field's thickness is the card's own height: the bar stretches to fill
- * whatever room the card has left after the optional chip row, so it is resized
- * by dragging the card rather than by a setting (see styles.css). `seamless`
- * drops the frame entirely (see `cardClass` below), which is how you put a bare
+ * whatever room the card has, so it is resized by dragging the card rather
+ * than by a setting (see styles.css) — the filter button lives inside the bar
+ * itself, not in a separate row, so it costs no extra height. `seamless` drops
+ * the frame entirely (see `cardClass` below), which is how you put a bare
  * search bar anywhere on the board instead of a card that contains one.
  */
 export function renderSearchBar(
@@ -31,12 +32,12 @@ export function renderSearchBar(
 ): void {
 	const cfg = card.searchBar ?? {};
 	const search = new SearchSection(view);
-	// One positioned wrapper holds the bar, the chip row and the results
-	// overlay, mirroring the header's search column — the overlay is absolutely
-	// positioned against it, so the dropdown spans the card's width.
+	// One positioned wrapper holds the bar and the results overlay, mirroring
+	// the header's search column — the overlay is absolutely positioned
+	// against it, so the dropdown spans the card's width.
 	const wrap = body.createDiv("hearth-searchbar-card");
-	// The bar and its button share a row so the button sits beside the field
-	// rather than above the chips, exactly as in the header.
+	// The bar and its button share a row so the button sits beside the field,
+	// exactly as in the header.
 	const row = wrap.createDiv("hearth-searchbar-row");
 	const bar = search.renderBar(row, { placeholder: cfg.placeholder });
 	if (cfg.button && cfg.button !== "none") {
@@ -49,9 +50,9 @@ export function renderSearchBar(
 }
 
 
-/** One toggle per file-type chip, mirroring Settings → Filters but scoped to
- * this card — so a narrow bar can carry the three chips that earn their place
- * instead of every type the vault happens to contain. Chips switched off
+/** One toggle per file type, mirroring Settings → Filters but scoped to this
+ * card — so a narrow bar's filter menu can carry the few types that earn their
+ * place instead of every type the vault happens to contain. Types switched off
  * vault-wide are shown here as off and can't be switched back on: this list
  * only ever hides more (see SearchSection.detectGroups). */
 function renderFilterTypes(
@@ -107,7 +108,7 @@ export function searchBarEditor(ctx: CardEditorContext, containerEl: HTMLElement
 				cfg.filters = v || undefined;
 				ctx.opts.save();
 				ctx.opts.rerender();
-				// The per-chip toggles below only exist while the row does.
+				// The per-type toggles below only exist while the button does.
 				ctx.requestRender();
 			}),
 		);
@@ -163,8 +164,8 @@ export const searchbarCard: CardDefinition<"searchbar"> = {
 	cloneConfig: (source, copy) => {
 		if (source.searchBar) {
 			copy.searchBar = { ...source.searchBar };
-			// The hidden-chip list is an array: copy it, or the clone edits the
-			// original's row too.
+			// The hidden-types list is an array: copy it, or the clone edits the
+			// original's list too.
 			if (source.searchBar.hiddenFilters) {
 				copy.searchBar.hiddenFilters = [...source.searchBar.hiddenFilters];
 			}
@@ -175,10 +176,11 @@ export const searchbarCard: CardDefinition<"searchbar"> = {
 	cardClass: (card) =>
 		card.searchBar?.seamless ? "is-searchbar-card is-seamless" : "is-searchbar-card",
 	// Deliberately not vault-live. The card holds live UI state — the typed
-	// query, the active chip, the open dropdown — and a redraw would throw all
-	// of it away; a background sync landing mid-search would blank the field
-	// under the user's hands. Nothing here goes stale in the meantime either:
-	// results are computed per keystroke, and the chip row (derived from the
-	// file types present in the vault) is rebuilt on the next board render.
+	// query, the excluded types, the open dropdown/popover — and a redraw
+	// would throw all of it away; a background sync landing mid-search would
+	// blank the field under the user's hands. Nothing here goes stale in the
+	// meantime either: results are computed per keystroke, and the filter menu
+	// (derived from the file types present in the vault) is rebuilt on the
+	// next board render.
 	liveness: { mode: "static" },
 };

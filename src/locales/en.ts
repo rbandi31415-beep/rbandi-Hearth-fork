@@ -88,6 +88,9 @@ export const en = {
 		placeholder: "Search the vault",
 		noMatches: "No matches",
 		noMatchingCommands: "No matching commands",
+		filterAria: "Filter results by type",
+		filterHeading: "Filter by type",
+		filterReset: "Show all",
 	},
 
 	// ---- Shared confirm dialog -----------------------------------------
@@ -1148,7 +1151,8 @@ export const en = {
 		filters: {
 			heading: "Search filters",
 			headingDesc:
-				"Filters are auto-detected from the file types in your vault. Hide any you don't want.",
+				"Types are auto-detected from the files in your vault and offered in the " +
+				"search bar's filter menu. Hide any you don't want to appear there.",
 		},
 		dashboard: {
 			heading: "Dashboard",
@@ -1747,14 +1751,14 @@ export const en = {
 			placeholderDesc:
 				"Text shown in the empty field. Leave blank to use the one from " +
 				"Settings → Appearance.",
-			filters: "Filter row",
+			filters: "Filter button",
 			filtersDesc:
-				"Show the file-type chips under the field, the same ones the header " +
-				"search bar offers. They need a taller card to sit in.",
-			filterTypes: "Filter chips",
+				"Show the file-type filter button in the field, the same one the " +
+				"header search bar offers.",
+			filterTypes: "Filter options",
 			filterTypesDesc:
-				"Which chips this card offers. A chip only appears when the vault " +
-				"actually holds that kind of file.",
+				"Which types this card's filter menu offers. A type only appears " +
+				"when the vault actually holds that kind of file.",
 			filterTypeGlobalOff: "Hidden for every search bar in Settings → Filters.",
 			button: "Button",
 			buttonDesc:
