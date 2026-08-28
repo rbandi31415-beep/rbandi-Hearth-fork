@@ -27,6 +27,7 @@ import { statsCard } from "./stats";
 import { searchCard } from "./search";
 import { searchbarCard } from "./searchbar";
 import { heatmapCard } from "./heatmap";
+import { trendCard } from "./trend";
 import { calculatorCard } from "./calculator";
 import { dataviewCard } from "./dataview";
 import { datacoreCard } from "./datacore";
@@ -76,6 +77,7 @@ export const CARD_DEFINITIONS: { [K in CardKind]: CardDefinition<K> } = {
 	search: searchCard,
 	searchbar: searchbarCard,
 	heatmap: heatmapCard,
+	trend: trendCard,
 	calculator: calculatorCard,
 	dataview: dataviewCard,
 	datacore: datacoreCard,
@@ -130,7 +132,7 @@ export const TEMPLATE_MENU_GROUPS: { category: CardCategory; templates: string[]
 		templates: ["note", "daily", "image", "slideshow", "canvas", "excalidraw", "base", "recent", "randomNote", "favorites", "bookmarks"],
 	},
 	{ category: "planning", templates: ["tasks", "schedule", "calendar", "clock"] },
-	{ category: "vault", templates: ["search", "searchbar", "stats", "heatmap", "stamps"] },
+	{ category: "vault", templates: ["search", "searchbar", "stats", "heatmap", "trend", "stamps"] },
 	{ category: "tools", templates: ["links", "commands", "text", "calculator", "web"] },
 	{ category: "integrations", templates: ["templater", "dataview", "datacore", "git", "jira", "rss", "weather", "leaf"] },
 	{ category: "fun", templates: ["pet", "question"] },

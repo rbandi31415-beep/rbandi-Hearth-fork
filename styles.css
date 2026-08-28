@@ -7246,6 +7246,150 @@ body.hearth-dv-resizing {
 	border-radius: 3px;
 }
 
+/* ---- Activity trend card (line graph) ------------------------------- */
+.hearth-trend {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-width: 0;
+	gap: 4px;
+}
+
+/* Plot row: y-axis gutter + the stretchable plot area. */
+.hearth-trend-plot {
+	display: flex;
+	flex: 1 1 auto;
+	min-height: 0;
+}
+
+.hearth-trend-yaxis {
+	position: relative;
+	flex: 0 0 28px;
+	width: 28px;
+}
+
+/* Each y tick is absolutely positioned at its value's height and pulled up
+   half a line so the number straddles the gridline it labels. */
+.hearth-trend-ytick {
+	position: absolute;
+	right: 4px;
+	transform: translateY(-50%);
+	font-size: 0.68rem;
+	line-height: 1;
+	color: var(--text-faint);
+}
+
+.hearth-trend-svg-wrap {
+	position: relative;
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.hearth-trend-svg {
+	display: block;
+	width: 100%;
+	height: 100%;
+	overflow: visible;
+}
+
+.hearth-trend-gridline {
+	stroke: var(--background-modifier-border);
+	stroke-width: 1px;
+}
+
+.hearth-trend-area {
+	stroke: none;
+}
+
+.hearth-trend-rawline,
+.hearth-trend-line {
+	fill: none;
+	stroke-width: 2px;
+	stroke-linejoin: round;
+	stroke-linecap: round;
+}
+
+.hearth-trend-rawline {
+	stroke-width: 1px;
+}
+
+/* Crosshair + marker are HTML overlays positioned in %, so they keep a fixed
+   pixel size regardless of how far the viewBox is stretched horizontally
+   (few weekly columns vs many daily ones). */
+.hearth-trend-crosshair {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 0;
+	border-left: 1px dashed var(--text-muted);
+	pointer-events: none;
+	opacity: 0;
+}
+
+.hearth-trend-marker {
+	position: absolute;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: rgb(var(--marker-rgb, 128, 128, 128));
+	box-shadow: 0 0 0 2px var(--background-primary);
+	transform: translate(-50%, -50%);
+	pointer-events: none;
+	opacity: 0;
+}
+
+.hearth-trend-crosshair.is-visible,
+.hearth-trend-marker.is-visible {
+	opacity: 1;
+}
+
+/* One invisible full-height hit-target column per point: hover shows the
+   crosshair and tooltip, click opens that day's daily note. */
+.hearth-trend-hit {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	background: transparent;
+	cursor: pointer;
+}
+
+.hearth-trend-tip {
+	position: absolute;
+	top: 2px;
+	transform: translateX(-50%);
+	padding: 2px 6px;
+	border-radius: 4px;
+	background: var(--background-secondary-alt);
+	border: 1px solid var(--background-modifier-border);
+	color: var(--text-normal);
+	font-size: 0.7rem;
+	white-space: nowrap;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 0.08s ease;
+}
+
+.hearth-trend-tip.is-visible {
+	opacity: 1;
+}
+
+/* x-axis: a few date labels inset to clear the y-axis gutter. */
+.hearth-trend-xaxis {
+	position: relative;
+	flex: 0 0 auto;
+	height: 0.85rem;
+	margin-left: 28px;
+}
+
+.hearth-trend-xtick {
+	position: absolute;
+	transform: translateX(-50%);
+	font-size: 0.68rem;
+	line-height: 1;
+	color: var(--text-faint);
+	white-space: nowrap;
+}
+
 /* ---- Web card: external-open button & framing fallback -------------- */
 .hearth-card-body.hearth-web-body {
 	position: relative;

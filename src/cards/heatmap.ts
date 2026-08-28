@@ -1,23 +1,28 @@
 import { Setting } from "obsidian";
-import { activityByDay, createDailyNoteAt, dailyNotesOptions, heatLevel, moment, type Moment } from "../cardbodies";
+import { heatLevel, moment, type Moment } from "../cardbodies";
 import { addResetButton } from "../editors";
-import { commitsByDay } from "../git";
 import { t } from "../i18n";
-import { openFile } from "../opener";
-import { tasksCompletedByDay } from "../tasknotes";
 import { type DashboardCard, type HeatmapMetric } from "../types";
-import { makeClickable } from "../ui";
 import { type HomeView } from "../view";
 import { type CardDefinition, type CardEditorContext } from "./definition";
+import {
+	ALL_ACTIVITY_METRICS,
+	type Rgb,
+	accentRgb,
+	hexToRgb,
+	makeDayClickable,
+	metricByDay,
+	metricWord,
+	resolveMetricRgb,
+	rgba,
+	rgbToHex,
+} from "./activityMetrics";
 
 
 // ---- Activity heatmap (GitHub-style) ------------------------------------
-
-type Rgb = [number, number, number];
-
-/** Every combinable metric, in a fixed order so the picker and the split-cell
- * stripe order never shuffle around as you toggle things on and off. */
-const ALL_HEATMAP_METRICS: HeatmapMetric[] = ["modified", "created", "commits", "tasksCompleted"];
+//
+// The metric list, day-bucketers, colour resolution and daily-note click
+// wiring are shared with the trend card — see ./activityMetrics.
 
 /** The metrics a "combined" card starts with before you touch the checkbox
  * row — matches what was originally asked for (modified/created/commits);
@@ -25,114 +30,11 @@ const ALL_HEATMAP_METRICS: HeatmapMetric[] = ["modified", "created", "commits", 
  * tasks doesn't show an empty stripe. */
 const DEFAULT_COMBINED_METRICS: HeatmapMetric[] = ["modified", "created", "commits"];
 
-/** The default hue for a metric that isn't "modified" and has no custom
- * color set — chosen distinct enough from each other to read apart in split
- * or mixed mode. "modified" has no entry here: it resolves from the theme's
- * live accent color instead (see accentRgb), matching the card's original,
- * theme-following look. */
-const DEFAULT_METRIC_HUE: Record<Exclude<HeatmapMetric, "modified">, number> = {
-	created: 150,
-	commits: 265,
-	tasksCompleted: 35,
-};
-
-/** Standard HSL → sRGB conversion (h in degrees, s/l in percent). */
-function hslToRgb(h: number, s: number, l: number): Rgb {
-	const sN = s / 100;
-	const lN = l / 100;
-	const k = (n: number) => (n + h / 30) % 12;
-	const a = sN * Math.min(lN, 1 - lN);
-	const f = (n: number) => lN - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
-	return [Math.round(255 * f(0)), Math.round(255 * f(8)), Math.round(255 * f(4))];
-}
-
-/** The theme's current accent color, read once per render from an element's
- * computed style (falls back to Obsidian's default violet-blue if the
- * custom properties aren't set for some reason). */
-function accentRgb(el: HTMLElement): Rgb {
-	const style = getComputedStyle(el);
-	const h = parseFloat(style.getPropertyValue("--accent-h"));
-	const s = parseFloat(style.getPropertyValue("--accent-s"));
-	const l = parseFloat(style.getPropertyValue("--accent-l"));
-	return hslToRgb(Number.isFinite(h) ? h : 266, Number.isFinite(s) ? s : 84, Number.isFinite(l) ? l : 62);
-}
-
-/** "#rrggbb" (or "#rgb") → RGB. Malformed input falls back to mid-grey rather
- * than throwing — a bad hand-edited value shouldn't take the card down. */
-function hexToRgb(hex: string): Rgb {
-	const clean = hex.trim().replace(/^#/, "");
-	const full =
-		clean.length === 3
-			? clean
-					.split("")
-					.map((c) => c + c)
-					.join("")
-			: clean;
-	const n = parseInt(full, 16);
-	if (full.length !== 6 || Number.isNaN(n)) return [128, 128, 128];
-	return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-
-/** RGB → "#rrggbb", for seeding a color picker with the current effective
- * color (including the theme-accent default, which has no hex of its own
- * until resolved). */
-function rgbToHex([r, g, b]: Rgb): string {
-	const c = (n: number) =>
-		Math.max(0, Math.min(255, Math.round(n)))
-			.toString(16)
-			.padStart(2, "0");
-	return `#${c(r)}${c(g)}${c(b)}`;
-}
-
-function rgba([r, g, b]: Rgb, alpha: number): string {
-	return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-/** The color for a metric in split/mixed combined mode: the card's own
- * override if set, otherwise the theme accent for "modified" or the fixed
- * default hue for anything else. */
-function resolveMetricRgb(el: HTMLElement, metric: HeatmapMetric, cfg: NonNullable<DashboardCard["heatmap"]>): Rgb {
-	const custom = cfg.metricColors?.[metric];
-	if (custom) return hexToRgb(custom);
-	if (metric === "modified") return accentRgb(el);
-	return hslToRgb(DEFAULT_METRIC_HUE[metric], 70, 55);
-}
-
 /** The color for single-metric mode and "blended" combined mode: the card's
  * own override if set, otherwise the theme accent — the card's original,
  * always-theme-following look. */
 function resolveBaseRgb(el: HTMLElement, cfg: NonNullable<DashboardCard["heatmap"]>): Rgb {
 	return cfg.color ? hexToRgb(cfg.color) : accentRgb(el);
-}
-
-/** Short label for a metric, used in tooltips ("Aug 21, 2026: 3 commits"). */
-function metricWord(metric: HeatmapMetric): string {
-	switch (metric) {
-		case "modified":
-			return t().editors.metricOptions.modified;
-		case "created":
-			return t().editors.metricOptions.created;
-		case "commits":
-			return t().editors.metricOptions.commits;
-		case "tasksCompleted":
-			return t().editors.metricOptions.tasksCompleted;
-	}
-}
-
-/** Day-bucketed counts for one metric. modified/created/tasksCompleted are
- * synchronous under the hood; commits needs an async read through
- * obsidian-git. Wrapping all four as async keeps the caller (which may need
- * several at once for "combined") to one shape. */
-async function metricByDay(view: HomeView, metric: HeatmapMetric): Promise<Map<string, number>> {
-	switch (metric) {
-		case "modified":
-		case "created":
-			return activityByDay(view.app, metric);
-		case "commits":
-			return commitsByDay(view.app);
-		case "tasksCompleted":
-			return tasksCompletedByDay(view.app);
-	}
 }
 
 /** The visible window: `weeks` columns ending on the current (partial) week,
@@ -157,20 +59,6 @@ function windowPeak(activity: Map<string, number>, start: Moment, todayKey: stri
 		if (key <= todayKey) peak = Math.max(peak, activity.get(key) ?? 0);
 	}
 	return peak;
-}
-
-/** Wire up "click a day to open/create its daily note" on a cell, shared by
- * every rendering mode below. */
-function makeDayClickable(view: HomeView, cellEl: HTMLElement, day: Moment): void {
-	const options = dailyNotesOptions(view);
-	if (!options) return;
-	const activate = () => {
-		void createDailyNoteAt(view, day, options).then((f) => {
-			if (f) void openFile(view, f, "card");
-		});
-	};
-	cellEl.addEventListener("click", activate);
-	makeClickable(cellEl, activate, day.format("MMMM D, YYYY"));
 }
 
 /** One metric per cell (the card's original look): a solid square shaded by
@@ -397,7 +285,7 @@ export function renderHeatmap(view: HomeView, card: DashboardCard, body: HTMLEle
 		// split or mixed: every metric keeps its own color and its own peak, so
 		// the legend below shows one row per metric — "for each color", not one
 		// shared scale that would misrepresent several different metrics as one.
-		const colors = new Map<HeatmapMetric, Rgb>(metrics.map((m) => [m, resolveMetricRgb(grid, m, cfg)]));
+		const colors = new Map<HeatmapMetric, Rgb>(metrics.map((m) => [m, resolveMetricRgb(grid, m, cfg.metricColors)]));
 		const peaks = new Map<HeatmapMetric, number>(
 			metrics.map((m) => [m, windowPeak(series.get(m) ?? new Map<string, number>(), start, todayKey, weeks)]),
 		);
@@ -449,7 +337,7 @@ export function heatmapEditor(ctx: CardEditorContext, containerEl: HTMLElement):
 		new Setting(containerEl).setName(t().editors.heatmap.combinedMetrics).setHeading();
 		const selected = new Set<HeatmapMetric>(cfg.combinedMetrics ?? DEFAULT_COMBINED_METRICS);
 		const row = containerEl.createDiv("hearth-type-filter");
-		for (const m of ALL_HEATMAP_METRICS) {
+		for (const m of ALL_ACTIVITY_METRICS) {
 			const chip = row.createDiv("hearth-type-filter-chip");
 			chip.toggleClass("is-active", selected.has(m));
 			chip.createDiv({ cls: "hearth-type-filter-label", text: metricWord(m) });
@@ -462,7 +350,7 @@ export function heatmapEditor(ctx: CardEditorContext, containerEl: HTMLElement):
 				const on = selected.has(m);
 				chip.toggleClass("is-active", on);
 				chip.setAttribute("aria-pressed", String(on));
-				const ordered = ALL_HEATMAP_METRICS.filter((x) => selected.has(x));
+				const ordered = ALL_ACTIVITY_METRICS.filter((x) => selected.has(x));
 				const isDefault =
 					ordered.length === DEFAULT_COMBINED_METRICS.length &&
 					ordered.every((x, i) => x === DEFAULT_COMBINED_METRICS[i]);
@@ -510,11 +398,11 @@ export function heatmapEditor(ctx: CardEditorContext, containerEl: HTMLElement):
 			});
 		} else {
 			new Setting(containerEl).setName(t().editors.heatmap.metricColors).setHeading();
-			for (const m of ALL_HEATMAP_METRICS) {
+			for (const m of ALL_ACTIVITY_METRICS) {
 				if (!selected.has(m)) continue;
 				const picked = new Setting(containerEl).setName(metricWord(m));
 				picked.addColorPicker((picker) => {
-					const current = cfg.metricColors?.[m] ?? rgbToHex(resolveMetricRgb(containerEl, m, cfg));
+					const current = cfg.metricColors?.[m] ?? rgbToHex(resolveMetricRgb(containerEl, m, cfg.metricColors));
 					picker.setValue(current).onChange((hex) => {
 						(cfg.metricColors ??= {})[m] = hex;
 						ctx.opts.save();

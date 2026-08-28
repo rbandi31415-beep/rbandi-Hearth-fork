@@ -28,6 +28,7 @@ export type CardKind =
 	| "search"
 	| "searchbar"
 	| "heatmap"
+	| "trend"
 	| "calculator"
 	| "dataview"
 	| "datacore"
@@ -627,6 +628,34 @@ export interface HeatmapConfig {
 	 * metric. A metric with no entry falls back to its built-in default (the
 	 * theme accent for "modified", a fixed hue for the others). */
 	metricColors?: Partial<Record<HeatmapMetric, string>>;
+}
+
+/** Per-card configuration for a "trend" card — one activity metric drawn as a
+ * day-by-day line graph. Shares its metric set (and their colours) with the
+ * heatmap card. */
+export interface TrendConfig {
+	/** Which metric to plot. Default "modified". */
+	metric?: HeatmapMetric;
+	/** How many days back the x-axis spans. Default 90, capped at 365. */
+	days?: number;
+	/** Custom line colour (hex, e.g. "#7c3aed"). Undefined uses the metric's
+	 * colour — the theme accent for "modified", a fixed hue otherwise, matching
+	 * the heatmap. */
+	color?: string;
+	/** Shade the area under the line. Default true; explicit false draws a bare
+	 * line. */
+	area?: boolean;
+	/** Overlay an N-day trailing-average line, since raw daily counts are spiky
+	 * for most vaults. Undefined defaults to 7; 0 (or 1) turns it off. Only
+	 * applies to a daily per-period line — ignored for a running total or
+	 * weekly grouping. */
+	rollingAvg?: number;
+	/** Plot a running total that only ever climbs, instead of each period's own
+	 * count. Undefined = each period's own count. */
+	mode?: "cumulative";
+	/** Group points by day or by week. Undefined auto-picks: day for windows up
+	 * to 120 days, week beyond, so a long span stays readable. */
+	bucket?: "day" | "week";
 }
 
 /** The built-in vault statistics a "stats" card can show. */
@@ -1332,6 +1361,8 @@ export interface DashboardCard {
 	searchBar?: SearchBarConfig;
 	/** kind === "heatmap": metric and range. */
 	heatmap?: HeatmapConfig;
+	/** kind === "trend": metric, range and line options for the activity graph. */
+	trend?: TrendConfig;
 	/** kind === "stats": which stats to show, attachment breakdown and custom
 	 * query counts (all gated behind the config's `advanced` flag). */
 	stats?: StatsConfig;

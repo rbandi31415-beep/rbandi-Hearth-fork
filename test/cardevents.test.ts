@@ -130,7 +130,7 @@ function liveCardRedraws(c: DashboardCard, e: VaultEvent): boolean {
 
 describe("vault-live redraw decision (registry liveness.shouldRedraw)", () => {
 	it("non-tasks live cards redraw on every event kind", () => {
-		for (const kind of ["stats", "calendar", "search", "heatmap"] as const) {
+		for (const kind of ["stats", "calendar", "search", "heatmap", "trend"] as const) {
 			for (const k of ALL_KINDS) {
 				expect(liveCardRedraws(card(kind), ev(k))).toBe(true);
 			}
