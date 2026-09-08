@@ -40,7 +40,8 @@ export type CardKind =
 	| "pet"
 	| "randomNote"
 	| "question"
-	| "stamps";
+	| "stamps"
+	| "routine";
 
 /** A refinement control available on a Jira saved-filter card. */
 export type JiraControl =
@@ -1273,6 +1274,45 @@ export interface StampFieldDef {
 	property: string;
 }
 
+/**
+ * One session on a "routine" card — a group of checklist rows plus the
+ * recurring TaskNotes note it completes.
+ *
+ * The subtasks themselves are not configured here: they are the CSV columns
+ * named `<key>:<label>` (the header is the source of truth). This carries only
+ * what the card can't read off the file — which note to stamp, and how many
+ * ticks count as "done".
+ */
+export interface RoutineSession {
+	/** Stable id, so the editor can address a session while it is renamed. */
+	id: string;
+	/** The column-name prefix (before the first ":") that marks this session's
+	 * subtask columns in the CSV header. */
+	key: string;
+	/** Row-group heading for the session. Falls back to `key`. */
+	label?: string;
+	/** Vault path of the daily-recurring TaskNotes note whose `complete_instances`
+	 * this session writes into. Empty leaves the card checklist-only. */
+	taskNote?: string;
+	/** How the day's completion is judged. Unset = every subtask must be ticked. */
+	thresholdMode?: "count" | "percent";
+	/** The count (≥ 1) or percent (1–100) for `thresholdMode`. Ignored when the
+	 * mode is unset. */
+	thresholdValue?: number;
+}
+
+/** Per-card configuration for a "routine" card. */
+export interface RoutineConfig {
+	/** Vault path of the CSV log the card owns (one row per day). A `.csv`
+	 * extension is added if absent. Empty means the card is unconfigured. */
+	file?: string;
+	/** The sessions, top to bottom. */
+	sessions?: RoutineSession[];
+	/** How many day columns to show, ending today (past + today only).
+	 * Default 30. */
+	days?: number;
+}
+
 export interface DashboardCard {
 	id: string;
 	kind: CardKind;
@@ -1322,6 +1362,11 @@ export interface DashboardCard {
 	 * subfolders) — a file counts if it's inside any of them. Undefined/empty
 	 * means no folder restriction. */
 	recentFolders?: string[];
+	/** kind === "recent": flag listed notes tagged #fleeting that aren't
+	 * `processed: true` — a red dot for an unprocessed note, an amber warning
+	 * for one missing the `processed` property. Only applies when a folder
+	 * scope (recentFolders) is set. Undefined means off. */
+	recentFlagUnprocessed?: boolean;
 	/** kind === "randomNote": restrict the daily pick to these folders (and
 	 * their subfolders) — pooled together. Undefined/empty means the whole
 	 * vault. */
@@ -1346,6 +1391,8 @@ export interface DashboardCard {
 	stampNote?: string;
 	/** kind === "stamps": the tracked rituals, in display order. */
 	stampFields?: StampFieldDef[];
+	/** kind === "routine": the log file, sessions and visible day count. */
+	routine?: RoutineConfig;
 	/** kind === "clock": time/greeting/date display options. */
 	clock?: ClockConfig;
 	/** kind === "tasks": source, folder scope and display options. */

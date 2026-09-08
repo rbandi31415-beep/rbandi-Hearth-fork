@@ -55,6 +55,7 @@ export const en = {
 			"Hearth: couldn't undo the recurring task completion.",
 		couldNotAddKanbanCard: "Hearth: couldn't add the card to the Kanban board.",
 		couldNotUpdateStamp: "Hearth: couldn't update that stamp.",
+		couldNotUpdateRoutine: "Hearth: couldn't update the routine's task note.",
 		couldNotConvertCard: "Hearth: couldn't convert the card into a note.",
 		templaterNoTemplate: (path: string) =>
 			`Hearth: template not found: ${path}`,
@@ -1284,6 +1285,7 @@ export const en = {
 			randomNote: "Random note",
 			question: "Daily question",
 			stamps: "Ritual stamps",
+			routine: "Routine checklist",
 		},
 		linkTypes: {
 			note: "Note",
@@ -1465,6 +1467,8 @@ export const en = {
 			withinDaysPlaceholder: "e.g. 7",
 			folders: "Folders",
 			foldersDesc: "Optional. Only list files inside these folders (and their subfolders). Add none for no restriction; add several to pool them together.",
+			flagUnprocessed: "Flag unprocessed fleeting notes",
+			flagUnprocessedDesc: "Beside each listed note tagged #fleeting, show a red dot when it isn't marked processed, or an amber warning when it has no \"processed\" property at all. Needs a folder scope set above.",
 		},
 		folderList: {
 			placeholder: "e.g. Knowledge/Fleeting",
@@ -1509,6 +1513,28 @@ export const en = {
 			propertyPlaceholder: "Frontmatter property, e.g. cleanup-last",
 			removeField: "Remove ritual",
 			addField: "Add ritual",
+		},
+		routine: {
+			file: "Log file",
+			fileDesc:
+				"The CSV the card owns — one row per day, one column per checklist item. Created automatically on first use if it doesn't exist. Add or rename items by editing the header row; each column is named \"session:item\".",
+			days: "Days shown",
+			daysDesc: "How many day columns the grid shows, ending today.",
+			sessionsHeading: "Sessions",
+			sessionKey: "Key",
+			sessionKeyDesc: "Matches the part before the \":\" in this session's column names.",
+			sessionLabel: "Label",
+			sessionNote: "Task note",
+			sessionNoteDesc:
+				"The daily-recurring TaskNotes note this session completes once enough items are ticked.",
+			pickNote: "Choose note",
+			threshold: "Completes when",
+			thresholdDesc: "How many items must be ticked to mark the day's task note done.",
+			thresholdAll: "All items",
+			thresholdCount: "At least N items",
+			thresholdPercent: "At least N%",
+			removeSession: "Remove session",
+			addSession: "Add session",
 		},
 		calendar: {
 			view: "Layout",
@@ -2551,6 +2577,9 @@ export const en = {
 			stampsNoNote: "Pick a tracking note in card settings",
 			stampsMissing: "That note doesn't exist yet",
 			stampsNoFields: "Add a ritual to track in card settings",
+			routineNoFile: "Set a log file in card settings",
+			routineMissing: "The log file doesn't exist yet",
+			routineNoSessions: "Add a session in card settings",
 			questionMissing: "That note doesn't exist yet",
 			questionEmptyPool: "No questions found in the note",
 		},
@@ -2737,6 +2766,10 @@ export const en = {
 			weekOf: (date: string) => `Week of ${date}`,
 			runningTotal: "running total",
 		},
+		recent: {
+			unprocessed: "Unprocessed fleeting note",
+			missingProcessed: "Fleeting note has no \"processed\" property",
+		},
 		randomNote: {
 			hint: "Today's pick",
 			refresh: "Show another",
@@ -2749,6 +2782,17 @@ export const en = {
 			never: "Never",
 			stampNow: "Stamp now",
 			createNote: "Create note",
+		},
+		routine: {
+			createFile: "Create log file",
+			addItem: "Add item",
+			addItemTitle: "New checklist item",
+			addItemLabel: "Item label",
+			addItemPlaceholder: "e.g. Weigh in",
+			addItemNoColon: "An item label can't contain a colon",
+			untitledSession: "Session",
+			progressLabel: (session: string, date: string, done: number, total: number) =>
+				`${session}, ${date}: ${done} of ${total} done`,
 		},
 		calendar: {
 			previousMonth: "Previous month",
@@ -3040,6 +3084,7 @@ export const en = {
 		randomNote: "Random note",
 		question: "Daily question",
 		stamps: "Ritual stamps",
+		routine: "Routine checklist",
 	},
 
 	/** One line per template, shown under its name in the add-card picker and
@@ -3082,6 +3127,7 @@ export const en = {
 		randomNote: "One note a day, picked for you",
 		question: "A thought-provoking question, one per day",
 		stamps: "When you last did a recurring chore, one tap to update it",
+		routine: "A daily checklist grid that ticks off your routine's task note",
 	},
 
 	// ---- Add-card picker -----------------------------------------------

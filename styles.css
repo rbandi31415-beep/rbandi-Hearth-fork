@@ -1988,6 +1988,38 @@
 	text-overflow: ellipsis;
 }
 
+/* Recent card: fleeting-note processing marker, pinned to the row's trailing
+   edge opposite the file icon. The label takes the slack so the marker never
+   gets pushed out of view. */
+.hearth-list-item.has-fleeting-flag .hearth-list-label {
+	flex: 1;
+	min-width: 0;
+}
+
+.hearth-fleeting-flag {
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-left: 8px;
+}
+
+.hearth-fleeting-flag.is-unprocessed {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--color-red, #f55);
+}
+
+.hearth-fleeting-flag.is-missing {
+	color: var(--color-orange, #e8a33d);
+}
+
+.hearth-fleeting-flag.is-missing .svg-icon {
+	width: 14px;
+	height: 14px;
+}
+
 /* A list row that carries a note-body excerpt stacks name over excerpt instead
  * of putting them side by side — a sentence squeezed into the row's spare
  * horizontal space is unreadable at any list width. */
@@ -2404,6 +2436,177 @@
 .hearth-stamp-button:disabled {
 	opacity: 0.5;
 	cursor: default;
+}
+
+/* Routine checklist: a grid of subtask rows (grouped by session) against day
+ * columns. The first column is a sticky label gutter; the rest scroll
+ * sideways, so a long history stays on one card. */
+.hearth-routine-scroll {
+	height: 100%;
+	overflow: auto;
+}
+
+.hearth-routine-grid {
+	display: grid;
+	grid-template-columns: minmax(120px, max-content) repeat(var(--routine-days, 30), 30px);
+	align-content: start;
+	font-size: var(--font-ui-small);
+	width: max-content;
+	min-width: 100%;
+}
+
+.hearth-routine-cell {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 26px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	border-right: 1px solid var(--background-modifier-border);
+}
+
+/* Sticky label gutter. */
+.hearth-routine-label {
+	position: sticky;
+	left: 0;
+	z-index: 2;
+	justify-content: flex-start;
+	gap: 6px;
+	padding: 2px 8px;
+	background: var(--background-primary);
+	text-align: left;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.hearth-routine-corner,
+.hearth-routine-dayhead {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	background: var(--background-primary);
+	border-bottom: 2px solid var(--background-modifier-border);
+}
+
+.hearth-routine-corner {
+	left: 0;
+	z-index: 3;
+}
+
+.hearth-routine-dayhead {
+	flex-direction: column;
+	gap: 0;
+	line-height: 1.1;
+	padding: 3px 0;
+	color: var(--text-muted);
+}
+
+.hearth-routine-dow {
+	font-size: 0.7em;
+	text-transform: uppercase;
+}
+
+.hearth-routine-dom {
+	font-variant-numeric: tabular-nums;
+}
+
+.hearth-routine-sessionhead {
+	font-weight: var(--font-semibold);
+	justify-content: space-between;
+	background: var(--background-secondary);
+}
+
+.hearth-routine-sessionhead.hearth-routine-label {
+	background: var(--background-secondary);
+}
+
+.hearth-routine-session-name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.hearth-routine-add {
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 18px;
+	height: 18px;
+	padding: 0;
+	border: none;
+	border-radius: var(--radius-s);
+	background: transparent;
+	box-shadow: none;
+	color: var(--text-muted);
+	cursor: pointer;
+}
+
+.hearth-routine-add:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.hearth-routine-progress {
+	font-size: 0.72em;
+	font-variant-numeric: tabular-nums;
+	color: var(--text-muted);
+	background: var(--background-secondary);
+}
+
+.hearth-routine-progress.is-complete {
+	color: var(--text-on-accent);
+	background: var(--interactive-accent);
+}
+
+.hearth-routine-subtask {
+	color: var(--text-muted);
+	padding-left: 18px;
+}
+
+.hearth-routine-box {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 18px;
+	height: 18px;
+	padding: 0;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background: var(--background-primary);
+	box-shadow: none;
+	color: var(--text-on-accent);
+	cursor: pointer;
+}
+
+.hearth-routine-box:hover {
+	border-color: var(--interactive-accent);
+}
+
+.hearth-routine-box.is-checked {
+	background: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+}
+
+.hearth-routine-box .svg-icon {
+	width: 13px;
+	height: 13px;
+}
+
+/* Today's column: a subtle accent wash down its length. */
+.hearth-routine-cell.is-today {
+	background: var(--background-modifier-hover);
+}
+
+.hearth-routine-dayhead.is-today {
+	color: var(--text-accent);
+	font-weight: var(--font-semibold);
+}
+
+.hearth-routine-session-editor {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	padding: 4px 12px;
+	margin-bottom: 10px;
 }
 
 /* Text / jot-down: a rendered Markdown preview that swaps to a textarea on
@@ -7181,13 +7384,6 @@ body.hearth-dv-resizing {
 	background: transparent;
 }
 
-/* Every visible (non-future) day is clickable — creates/opens its daily note
- * — regardless of whether it had any activity, so the cursor says so
- * uniformly rather than only over cells with a heat color. */
-.hearth-heatmap-cell:not(.is-empty) {
-	cursor: pointer;
-}
-
 .hearth-heatmap-cell.is-split {
 	display: flex;
 	gap: 1px;
@@ -7279,17 +7475,30 @@ body.hearth-dv-resizing {
 	color: var(--text-faint);
 }
 
+/* Extreme ticks anchor by their inner edge so they stay within the gutter. */
+.hearth-trend-ytick.is-min {
+	transform: translateY(-100%);
+}
+
+.hearth-trend-ytick.is-max {
+	transform: translateY(0);
+}
+
 .hearth-trend-svg-wrap {
 	position: relative;
 	flex: 1 1 auto;
 	min-width: 0;
+	/* Clip the plot to its box: gridlines and the line stroke are drawn right
+	   on the viewBox edges, and the hover marker/crosshair span the full
+	   height — without this their sub-pixel spill reaches .hearth-card-body
+	   (overflow: auto) and raises a scrollbar. */
+	overflow: hidden;
 }
 
 .hearth-trend-svg {
 	display: block;
 	width: 100%;
 	height: 100%;
-	overflow: visible;
 }
 
 .hearth-trend-gridline {
@@ -7344,19 +7553,20 @@ body.hearth-dv-resizing {
 }
 
 /* One invisible full-height hit-target column per point: hover shows the
-   crosshair and tooltip, click opens that day's daily note. */
+   crosshair and tooltip. */
 .hearth-trend-hit {
 	position: absolute;
 	top: 0;
 	bottom: 0;
 	background: transparent;
-	cursor: pointer;
 }
 
 .hearth-trend-tip {
 	position: absolute;
 	top: 2px;
-	transform: translateX(-50%);
+	/* --tip-shift (px, set on hover) pulls the tip back inside the plot when a
+	   point near an edge would otherwise centre it past the clip boundary. */
+	transform: translateX(calc(-50% + var(--tip-shift, 0px)));
 	padding: 2px 6px;
 	border-radius: 4px;
 	background: var(--background-secondary-alt);
@@ -7388,6 +7598,15 @@ body.hearth-dv-resizing {
 	line-height: 1;
 	color: var(--text-faint);
 	white-space: nowrap;
+}
+
+/* Edge labels anchor by their inner edge so they don't spill past the plot. */
+.hearth-trend-xtick.is-first {
+	transform: translateX(0);
+}
+
+.hearth-trend-xtick.is-last {
+	transform: translateX(-100%);
 }
 
 /* ---- Web card: external-open button & framing fallback -------------- */

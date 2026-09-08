@@ -62,6 +62,25 @@ describe("CARD_TEMPLATES (add-card menu)", () => {
 			{ id: "schedule", icon: "calendar-range", category: "planning", requires: null, build: { kind: "schedule", title: "Calendar", schedule: {}, w: 8, h: 6 } },
 			{ id: "calendar", icon: "calendar-days", category: "planning", requires: null, build: { kind: "calendar", title: "Calendar", w: 4, h: 4 } },
 			{ id: "clock", icon: "clock", category: "planning", requires: null, build: { kind: "clock", title: "", w: 4, h: 2 } },
+			{
+				id: "routine",
+				icon: "list-checks",
+				category: "planning",
+				requires: null,
+				build: {
+					kind: "routine",
+					title: "Daily routine",
+					routine: {
+						file: "Meta/Routine Log.csv",
+						sessions: [
+							{ id: "routine-morning", key: "morning", label: "Morning" },
+							{ id: "routine-closing", key: "closing", label: "Closing" },
+						],
+					},
+					w: 8,
+					h: 4,
+				},
+			},
 
 			// ---- Vault insight ----
 			{ id: "search", icon: "search", category: "vault", requires: null, build: { kind: "search", title: "Query", savedSearch: { query: "" }, w: 4, h: 4 } },
@@ -351,6 +370,7 @@ describe("liveness classification", () => {
 			randomNote: "static",
 			question: "watch-file",
 			stamps: "watch-file",
+			routine: "watch-file",
 		});
 	});
 });

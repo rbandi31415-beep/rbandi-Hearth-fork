@@ -1,4 +1,4 @@
-import { setIcon, Setting, TFile } from "obsidian";
+import { getAllTags, setIcon, Setting, TFile } from "obsidian";
 import { emptyState } from "../cardbodies";
 import { addResetButton, folderListEditor } from "../editors";
 import { applyFileIcon, fileIconOptions, resolveFileIcon } from "../fileicons";
@@ -18,6 +18,32 @@ import { type CardDefinition, type CardEditorContext } from "./definition";
 function inAnyFolder(path: string, folders: string[]): boolean {
 	if (folders.length === 0) return true;
 	return folders.some((f) => path === f || path.startsWith(`${f}/`));
+}
+
+/** The tag that marks a note as a fleeting/capture note awaiting processing. */
+const FLEETING_TAG = "fleeting";
+
+/** The processing status of a listed note, for the optional Recent-card marker:
+ *   - `"unprocessed"` — tagged #fleeting, has a `processed` property that isn't
+ *     `true` (red dot);
+ *   - `"missing"` — tagged #fleeting but carries no `processed` property at all,
+ *     which the capture template always writes (amber warning);
+ *   - `null` — not a fleeting note, or one that's `processed: true`.
+ * The folder half of "is this a fleeting note" is already covered by the card's
+ * own folder scope, so only the tag is checked here. */
+function fleetingFlag(app: HomeView["app"], file: TFile): "unprocessed" | "missing" | null {
+	if (file.extension !== "md") return null;
+	const cache = app.metadataCache.getFileCache(file);
+	if (!cache) return null;
+	const tagged = (getAllTags(cache) ?? []).some((tag) => {
+		const name = tag.replace(/^#/, "").toLowerCase();
+		return name === FLEETING_TAG || name.startsWith(`${FLEETING_TAG}/`);
+	});
+	if (!tagged) return null;
+	const fm = cache.frontmatter;
+	const key = fm && Object.keys(fm).find((k) => k.toLowerCase() === "processed");
+	if (!key) return "missing";
+	return fm?.[key] === true ? null : "unprocessed";
 }
 
 export function renderRecent(view: HomeView, card: DashboardCard, body: HTMLElement): void {
@@ -72,10 +98,24 @@ export function renderRecent(view: HomeView, card: DashboardCard, body: HTMLElem
 
 	const list = body.createDiv("hearth-list");
 	const icons = fileIconOptions(view.plugin.settings);
+	// The fleeting-note marker only makes sense once the card is narrowed to a
+	// folder (see the editor toggle) — otherwise every #fleeting note in the
+	// vault would light up whatever the card is meant to show.
+	const flagUnprocessed = card.recentFlagUnprocessed === true && folders.length > 0;
 	for (const file of files) {
 		const row = list.createDiv("hearth-list-item");
 		applyFileIcon(row.createDiv("hearth-list-icon"), resolveFileIcon(view.app, file, icons));
 		row.createDiv({ cls: "hearth-list-label", text: file.basename });
+		const flag = flagUnprocessed ? fleetingFlag(view.app, file) : null;
+		if (flag) {
+			row.addClass("has-fleeting-flag");
+			const mark = row.createDiv(`hearth-fleeting-flag is-${flag}`);
+			const label =
+				flag === "missing" ? t().cards.recent.missingProcessed : t().cards.recent.unprocessed;
+			if (flag === "missing") setIcon(mark, "alert-triangle");
+			mark.setAttribute("aria-label", label);
+			mark.setAttribute("title", label);
+		}
 		const open = () => void openFile(view, file, "card");
 		row.addEventListener("click", open);
 		makeClickable(row, open, file.basename);
@@ -151,6 +191,24 @@ export function recentEditor(ctx: CardEditorContext, containerEl: HTMLElement): 
 			card.recentFolders = v;
 		},
 	);
+
+	// Only offered once the list is folder-scoped — the marker keys off the
+	// #fleeting tag alone, so without a scope it would flag notes from anywhere.
+	if ((card.recentFolders?.length ?? 0) > 0) {
+		const flag = new Setting(containerEl)
+			.setName(t().editors.recent.flagUnprocessed)
+			.setDesc(t().editors.recent.flagUnprocessedDesc);
+		flag.addToggle((tog) => {
+			tog.setValue(card.recentFlagUnprocessed === true).onChange((on) => {
+				card.recentFlagUnprocessed = on ? true : undefined;
+				ctx.opts.save();
+				ctx.opts.rerender();
+			});
+		});
+		addResetButton(ctx, flag, t().settings.resetField, () => {
+			card.recentFlagUnprocessed = undefined;
+		});
+	}
 
 	recentTypesEditor(ctx, containerEl, card);
 }

@@ -1,10 +1,8 @@
-import { activityByDay, createDailyNoteAt, dailyNotesOptions, moment, type Moment } from "../cardbodies";
+import { activityByDay, moment, type Moment } from "../cardbodies";
 import { commitsByDay } from "../git";
 import { t } from "../i18n";
-import { openFile } from "../opener";
 import { tasksCompletedByDay } from "../tasknotes";
 import { type HeatmapMetric } from "../types";
-import { makeClickable } from "../ui";
 import { type HomeView } from "../view";
 
 // ---- Shared activity-metric plumbing ----------------------------------
@@ -12,8 +10,7 @@ import { type HomeView } from "../view";
 // The heatmap card and the trend (line-graph) card show the same underlying
 // numbers — notes edited/created per day, commits per day, tasks completed
 // per day — drawn two different ways. Everything they have in common lives
-// here: the metric list, the day-bucketers, the colour resolution, and the
-// "click a day to open its daily note" wiring.
+// here: the metric list, the day-bucketers, and the colour resolution.
 
 export type Rgb = [number, number, number];
 
@@ -123,20 +120,6 @@ export async function metricByDay(view: HomeView, metric: HeatmapMetric): Promis
 		case "tasksCompleted":
 			return tasksCompletedByDay(view.app);
 	}
-}
-
-/** Wire up "click a day to open/create its daily note" on an element, shared
- * by every activity-card rendering mode. */
-export function makeDayClickable(view: HomeView, el: HTMLElement, day: Moment): void {
-	const options = dailyNotesOptions(view);
-	if (!options) return;
-	const activate = () => {
-		void createDailyNoteAt(view, day, options).then((f) => {
-			if (f) void openFile(view, f, "card");
-		});
-	};
-	el.addEventListener("click", activate);
-	makeClickable(el, activate, day.format("MMMM D, YYYY"));
 }
 
 /** The last `days` calendar days, oldest first, ending on today. */

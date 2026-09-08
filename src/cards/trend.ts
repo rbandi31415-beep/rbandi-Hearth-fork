@@ -9,7 +9,6 @@ import {
 	type Rgb,
 	dayWindow,
 	hexToRgb,
-	makeDayClickable,
 	metricByDay,
 	metricWord,
 	resolveMetricRgb,
@@ -97,7 +96,7 @@ function rollingAverage(values: number[], window: number): number[] {
 
 interface Point {
 	/** The day the point represents — for a weekly bucket, the week's first
-	 * day (used for the label and the daily-note click). */
+	 * day (used for the axis label and the hover tooltip). */
 	day: Moment;
 	value: number;
 }
@@ -134,10 +133,11 @@ function xAt(i: number): number {
 }
 
 /** y for `value` against a 0..max axis — already a 0–100 percentage since the
- * viewBox is 100 tall. */
+ * viewBox is 100 tall. The baseline sits at VB_HEIGHT and a full-height value
+ * lands at VB_TOP_PAD, so the peak's stroke keeps clear of the top edge. */
 function yFor(value: number, max: number): number {
 	const usable = VB_HEIGHT - VB_TOP_PAD;
-	return VB_HEIGHT - VB_TOP_PAD - (value / max) * usable;
+	return VB_HEIGHT - (value / max) * usable;
 }
 
 function pointsList(values: number[], max: number): string {
@@ -160,7 +160,6 @@ interface ChartOptions {
 }
 
 function paintChart(
-	view: HomeView,
 	wrap: HTMLElement,
 	series: Point[],
 	average: number[] | null,
@@ -175,11 +174,16 @@ function paintChart(
 	const plot = wrap.createDiv("hearth-trend-plot");
 
 	// y-axis: one number per tick, positioned by the same scale as the grid.
+	// The 0 tick lands on the very bottom edge, so anchor the extreme ticks by
+	// their inner edge rather than their centre to keep them inside the gutter.
 	const yAxis = plot.createDiv("hearth-trend-yaxis");
-	for (const tick of axisTicks(max)) {
+	const ticks = axisTicks(max);
+	ticks.forEach((tick, i) => {
 		const tickEl = yAxis.createDiv({ cls: "hearth-trend-ytick", text: String(tick) });
 		tickEl.style.top = `${yFor(tick, max)}%`;
-	}
+		if (i === 0) tickEl.addClass("is-min");
+		else if (i === ticks.length - 1) tickEl.addClass("is-max");
+	});
 
 	const svgWrap = plot.createDiv("hearth-trend-svg-wrap");
 	const svg = svgWrap.createSvg("svg", {
@@ -220,9 +224,9 @@ function paintChart(
 		});
 	}
 
-	// Hover layer + click-to-open: marker, crosshair and tooltip are HTML
-	// positioned in %, so they stay the right size whatever the viewBox stretch
-	// (13 weekly columns vs 90 daily ones) works out to.
+	// Hover layer: marker, crosshair and tooltip are HTML positioned in %, so
+	// they stay the right size whatever the viewBox stretch (13 weekly columns
+	// vs 90 daily ones) works out to.
 	const crosshair = svgWrap.createDiv("hearth-trend-crosshair");
 	const marker = svgWrap.createDiv("hearth-trend-marker");
 	marker.style.setProperty("--marker-rgb", `${rgb[0]}, ${rgb[1]}, ${rgb[2]}`);
@@ -248,20 +252,33 @@ function paintChart(
 			marker.style.top = `${yFor(shownValues[i], max)}%`;
 			tip.setText(`${date} · ${point.value} ${metric}`);
 			tip.style.left = `${xPct}%`;
+			tip.style.removeProperty("--tip-shift");
 			crosshair.addClass("is-visible");
 			marker.addClass("is-visible");
 			tip.addClass("is-visible");
+			// The plot clips at its edges, so a tooltip centred on a point near
+			// either side would be cut off — nudge it back inside by however far
+			// it overhangs, keeping the crosshair on the true x.
+			const bounds = svgWrap.getBoundingClientRect();
+			const box = tip.getBoundingClientRect();
+			const overLeft = Math.max(0, bounds.left - box.left);
+			const overRight = Math.max(0, box.right - bounds.right);
+			const shift = Math.ceil(overLeft - overRight);
+			if (shift !== 0) tip.style.setProperty("--tip-shift", `${shift}px`);
 		});
 		hit.addEventListener("mouseleave", hideHover);
-		makeDayClickable(view, hit, point.day);
 	});
 
 	// x-axis: a handful of evenly spaced dates, inset to clear the y-axis gutter.
+	// The edge labels anchor by their inner edge instead of their centre so a
+	// date sitting against the plot boundary doesn't spill past it.
 	const xAxis = wrap.createDiv("hearth-trend-xaxis");
 	const step = Math.max(1, Math.round((width - 1) / (X_LABELS - 1)));
 	for (let i = 0; i < width; i += step) {
 		const labelEl = xAxis.createDiv({ cls: "hearth-trend-xtick", text: series[i].day.format("MMM D") });
 		labelEl.style.left = `${(xAt(i) / width) * 100}%`;
+		if (i === 0) labelEl.addClass("is-first");
+		else if (i + step >= width) labelEl.addClass("is-last");
 	}
 }
 
@@ -286,7 +303,7 @@ export function renderTrend(view: HomeView, card: DashboardCard, body: HTMLEleme
 		if (cumulative) series = cumulate(series);
 
 		const average = avgWindow ? rollingAverage(series.map((p) => p.value), avgWindow) : null;
-		paintChart(view, wrap, series, average, rgb, metricWord(metric), { showArea, weekly, cumulative });
+		paintChart(wrap, series, average, rgb, metricWord(metric), { showArea, weekly, cumulative });
 	});
 }
 

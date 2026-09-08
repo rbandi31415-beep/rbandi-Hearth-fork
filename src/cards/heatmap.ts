@@ -10,7 +10,6 @@ import {
 	type Rgb,
 	accentRgb,
 	hexToRgb,
-	makeDayClickable,
 	metricByDay,
 	metricWord,
 	resolveMetricRgb,
@@ -21,8 +20,8 @@ import {
 
 // ---- Activity heatmap (GitHub-style) ------------------------------------
 //
-// The metric list, day-bucketers, colour resolution and daily-note click
-// wiring are shared with the trend card — see ./activityMetrics.
+// The metric list, day-bucketers and colour resolution are shared with the
+// trend card — see ./activityMetrics.
 
 /** The metrics a "combined" card starts with before you touch the checkbox
  * row — matches what was originally asked for (modified/created/commits);
@@ -66,7 +65,6 @@ function windowPeak(activity: Map<string, number>, start: Moment, todayKey: stri
  * single-metric card and for "combined" in its "blended" style, where
  * `activity` is already the several metrics' counts summed per day. */
 function paintSingleGrid(
-	view: HomeView,
 	grid: HTMLElement,
 	weeks: number,
 	start: Moment,
@@ -92,7 +90,6 @@ function paintSingleGrid(
 			}
 			cellEl.setAttribute("aria-label", t().cards.calendar.dayMetric(day.format("MMM D, YYYY"), count, label));
 			cellEl.setAttribute("title", `${day.format("MMM D, YYYY")} · ${count} ${label}`);
-			makeDayClickable(view, cellEl, day);
 		}
 	}
 }
@@ -103,7 +100,6 @@ function paintSingleGrid(
  * a busy one (dozens of edits a day), and each stripe reads apart from the
  * others by color, not just position. */
 function paintSplitGrid(
-	view: HomeView,
 	grid: HTMLElement,
 	weeks: number,
 	start: Moment,
@@ -135,7 +131,6 @@ function paintSplitGrid(
 				parts.push(`${count} ${metricWord(m)}`);
 			}
 			cellEl.setAttribute("aria-label", `${day.format("MMM D, YYYY")}: ${parts.join(", ")}`);
-			makeDayClickable(view, cellEl, day);
 		}
 	}
 }
@@ -152,7 +147,6 @@ function paintSplitGrid(
  *   mode, so a quiet day still reads as quiet regardless of color.
  */
 function paintMixedGrid(
-	view: HomeView,
 	grid: HTMLElement,
 	weeks: number,
 	start: Moment,
@@ -208,7 +202,6 @@ function paintMixedGrid(
 					alpha,
 				);
 			}
-			makeDayClickable(view, cellEl, day);
 		}
 	}
 }
@@ -262,7 +255,7 @@ export function renderHeatmap(view: HomeView, card: DashboardCard, body: HTMLEle
 			const rgb = resolveBaseRgb(grid, cfg);
 			const activity = series.get(metric) ?? new Map<string, number>();
 			const peak = windowPeak(activity, start, todayKey, weeks);
-			paintSingleGrid(view, grid, weeks, start, todayKey, activity, rgb, peak, metricWord(metric));
+			paintSingleGrid(grid, weeks, start, todayKey, activity, rgb, peak, metricWord(metric));
 			renderLegend(wrap, [{ rgb, peak }]);
 			return;
 		}
@@ -277,7 +270,7 @@ export function renderHeatmap(view: HomeView, card: DashboardCard, body: HTMLEle
 				}
 			}
 			const peak = windowPeak(blended, start, todayKey, weeks);
-			paintSingleGrid(view, grid, weeks, start, todayKey, blended, rgb, peak, t().cards.heatmap.combinedLabel);
+			paintSingleGrid(grid, weeks, start, todayKey, blended, rgb, peak, t().cards.heatmap.combinedLabel);
 			renderLegend(wrap, [{ rgb, peak, label: t().cards.heatmap.combinedLabel }]);
 			return;
 		}
@@ -290,9 +283,9 @@ export function renderHeatmap(view: HomeView, card: DashboardCard, body: HTMLEle
 			metrics.map((m) => [m, windowPeak(series.get(m) ?? new Map<string, number>(), start, todayKey, weeks)]),
 		);
 		if (combinedStyle === "split") {
-			paintSplitGrid(view, grid, weeks, start, todayKey, metrics, series, colors, peaks);
+			paintSplitGrid(grid, weeks, start, todayKey, metrics, series, colors, peaks);
 		} else {
-			paintMixedGrid(view, grid, weeks, start, todayKey, metrics, series, colors, peaks);
+			paintMixedGrid(grid, weeks, start, todayKey, metrics, series, colors, peaks);
 		}
 		renderLegend(
 			wrap,
