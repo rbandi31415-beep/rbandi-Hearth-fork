@@ -107,6 +107,32 @@ export function barLayout(items: ChartDatum[], max?: number): BarRow[] {
 }
 
 
+// ---- Sparkline --------------------------------------------------------
+
+/**
+ * `points` for a `<polyline>` spanning `width`×`height`: `values` mapped so the
+ * first sits at x=0 and the last at x=width, y flipped so the largest value is
+ * at the top (`pad` px inset top and bottom). A flat series draws along the
+ * middle. Fewer than two values yields "".
+ */
+export function sparklinePoints(values: number[], width: number, height: number, pad = 1): string {
+	if (values.length < 2) return "";
+	const max = Math.max(...values);
+	const min = Math.min(...values);
+	const range = max - min;
+	const usable = height - pad * 2;
+	const step = width / (values.length - 1);
+	return values
+		.map((v, i) => {
+			const x = i * step;
+			// A flat series has no range to map — sit it on the middle line.
+			const y = range === 0 ? pad + usable / 2 : pad + usable * (1 - (v - min) / range);
+			return `${x.toFixed(2)},${y.toFixed(2)}`;
+		})
+		.join(" ");
+}
+
+
 // ---- Radial (polar) bars ----------------------------------------------
 
 /** A point on a circle. Angles are degrees clockwise from 12 o'clock, matching

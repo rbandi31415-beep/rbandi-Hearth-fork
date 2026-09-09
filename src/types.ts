@@ -30,6 +30,7 @@ export type CardKind =
 	| "heatmap"
 	| "trend"
 	| "folderchart"
+	| "newnotes"
 	| "calculator"
 	| "dataview"
 	| "datacore"
@@ -677,6 +678,28 @@ export interface FolderChartConfig {
 	sort?: "count" | "name";
 	/** Custom bar colour (hex). Undefined uses the theme accent. */
 	color?: string;
+}
+
+/** Per-card configuration for a "newnotes" card — how many notes matching a
+ * scope were created in a recent window, versus the window before it. */
+export interface NewNotesConfig {
+	/** What makes a note count. Default "tag". */
+	scopeKind?: "tag" | "folder" | "property";
+	/** scopeKind === "tag": the tag (with or without "#"); subtags count. */
+	tag?: string;
+	/** scopeKind === "folder": the subtree ("" / unset = whole vault). */
+	folder?: string;
+	/** scopeKind === "property": the frontmatter key that must be present. */
+	propertyKey?: string;
+	/** scopeKind === "property": require this value (optional — unset just
+	 * needs the key present). */
+	propertyValue?: string;
+	/** Window length in days. Default 30, capped at 365. */
+	days?: number;
+	/** List the matching notes below the count. Default off. */
+	showList?: boolean;
+	/** Draw a per-day sparkline of the window. Default off. */
+	showSparkline?: boolean;
 }
 
 /** The built-in vault statistics a "stats" card can show. */
@@ -1441,6 +1464,8 @@ export interface DashboardCard {
 	trend?: TrendConfig;
 	/** kind === "folderchart": which subtrees, bar style and slice options. */
 	folderChart?: FolderChartConfig;
+	/** kind === "newnotes": scope and window for the recent-notes count. */
+	newNotes?: NewNotesConfig;
 	/** kind === "stats": which stats to show, attachment breakdown and custom
 	 * query counts (all gated behind the config's `advanced` flag). */
 	stats?: StatsConfig;

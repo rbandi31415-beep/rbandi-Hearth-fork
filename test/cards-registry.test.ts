@@ -89,6 +89,7 @@ describe("CARD_TEMPLATES (add-card menu)", () => {
 			{ id: "heatmap", icon: "activity", category: "vault", requires: null, build: { kind: "heatmap", title: "Activity", heatmap: {}, w: 6, h: 3 } },
 			{ id: "trend", icon: "trending-up", category: "vault", requires: null, build: { kind: "trend", title: "Activity trend", trend: {}, w: 6, h: 3 } },
 			{ id: "folderchart", icon: "chart-pie", category: "vault", requires: null, build: { kind: "folderchart", title: "Folders", folderChart: {}, w: 5, h: 4 } },
+			{ id: "newnotes", icon: "sparkles", category: "vault", requires: null, build: { kind: "newnotes", title: "New notes", newNotes: {}, w: 4, h: 2 } },
 			{ id: "stamps", icon: "stamp", category: "vault", requires: null, build: { kind: "stamps", title: "Last done", stampFields: [{ id: "cleanup", label: "Cleanup", property: "cleanup-last" }, { id: "linking", label: "Linking", property: "linking-last" }], w: 4, h: 3 } },
 
 			// ---- Tools ----
@@ -360,6 +361,7 @@ describe("liveness classification", () => {
 			heatmap: "vault",
 			trend: "vault",
 			folderchart: "vault",
+			newnotes: "vault",
 			calculator: "static",
 			dataview: "static",
 			datacore: "static",

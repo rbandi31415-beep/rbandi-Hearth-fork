@@ -7,6 +7,7 @@ import {
 	radialLayout,
 	rollUp,
 	sortData,
+	sparklinePoints,
 	type ChartDatum,
 } from "../src/chartbars";
 
@@ -100,6 +101,23 @@ describe("barLayout", () => {
 	it("clamps to [0,1] and handles zero without NaN", () => {
 		const rows = barLayout([{ label: "z", value: 0 }], 10);
 		expect(rows[0].fraction).toBe(0);
+	});
+});
+
+describe("sparklinePoints", () => {
+	it("spans the full width and flips y so the max is at the top", () => {
+		const pts = sparklinePoints([0, 5, 10], 100, 20, 0).split(" ");
+		expect(pts[0]).toBe("0.00,20.00"); // min -> bottom
+		expect(pts[2]).toBe("100.00,0.00"); // max -> top, last x
+	});
+
+	it("returns empty for fewer than two points", () => {
+		expect(sparklinePoints([3], 100, 20)).toBe("");
+	});
+
+	it("draws a flat series along the middle", () => {
+		const pts = sparklinePoints([4, 4, 4], 100, 20, 0).split(" ");
+		expect(pts.every((p) => p.endsWith(",10.00"))).toBe(true);
 	});
 });
 
