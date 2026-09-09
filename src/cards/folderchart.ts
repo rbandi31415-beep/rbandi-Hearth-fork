@@ -3,6 +3,8 @@ import {
 	type ChartDatum,
 	type RolledDatum,
 	barLayout,
+	pieLayout,
+	polarPoint,
 	radialLayout,
 	rollUp,
 	sortData,
@@ -136,6 +138,7 @@ export function renderFolderChart(view: HomeView, card: DashboardCard, body: HTM
 
 	const plot = wrap.createDiv("hearth-folderchart-plot");
 	if (style === "bars") paintBars(plot, rolled, metaByLabel, rgb, setDrill);
+	else if (style === "pie") paintPie(plot, rolled, metaByLabel, rgb, setDrill);
 	else paintRadial(plot, rolled, metaByLabel, rgb, setDrill);
 }
 
@@ -213,18 +216,97 @@ function paintRadial(
 	}).textContent = String(total);
 
 	// One hue for every wedge, so a legend is what ties a name to a slice.
+	paintLegend(
+		container,
+		bars.map((bar) => ({
+			label: bar.label,
+			value: bar.value,
+			alpha: fillAlpha((bar.outerRadius - R_INNER) / TRACK),
+		})),
+		meta,
+		rgb,
+		onDrill,
+	);
+}
+
+function paintPie(
+	container: HTMLElement,
+	data: RolledDatum[],
+	meta: Map<string, SliceMeta>,
+	rgb: Rgb,
+	onDrill: (target: string) => void,
+): void {
+	const SIZE = 200;
+	const RADIUS = 92;
+
+	const wrapEl = container.createDiv("hearth-folderchart-pie");
+	const svg = wrapEl.createSvg("svg", {
+		cls: "hearth-folderchart-svg",
+		attr: { viewBox: `0 0 ${SIZE} ${SIZE}` },
+	});
+	const slices = pieLayout(
+		data.map((d) => ({ label: d.label, value: d.value })),
+		{ cx: SIZE / 2, cy: SIZE / 2, radius: RADIUS, padAngle: 1 },
+	);
+	// Shade each slice against the largest so neighbours read apart even in one
+	// hue; a sorted-by-count chart then steps cleanly from solid to faint.
+	const maxFraction = Math.max(...slices.map((s) => s.fraction), 0.0001);
+
+	for (const slice of slices) {
+		const target = drillTarget(meta.get(slice.label));
+		const path = svg.createSvg("path", {
+			cls: "hearth-folderchart-slice",
+			attr: { d: slice.path, fill: rgba(rgb, fillAlpha(slice.fraction / maxFraction)) },
+		});
+		path.createSvg("title").textContent = `${slice.label} · ${slice.value} (${Math.round(slice.fraction * 100)}%)`;
+		if (target) {
+			path.addClass("is-drillable");
+			path.addEventListener("click", () => onDrill(target));
+		}
+		// Name a slice on the wheel only when its wedge is wide enough to hold it.
+		if (slice.endAngle - slice.startAngle >= 26) {
+			const at = polarPoint(SIZE / 2, SIZE / 2, RADIUS * 0.62, slice.midAngle);
+			svg.createSvg("text", {
+				cls: "hearth-folderchart-slice-label",
+				attr: { x: at.x, y: at.y, "text-anchor": "middle", "dominant-baseline": "central" },
+			}).textContent = slice.label;
+		}
+	}
+
+	paintLegend(
+		container,
+		slices.map((slice) => ({
+			label: slice.label,
+			value: slice.value,
+			alpha: fillAlpha(slice.fraction / maxFraction),
+		})),
+		meta,
+		rgb,
+		onDrill,
+	);
+}
+
+/** The name→slice legend shared by the radial and pie views: one row per
+ * slice, drillable when its folder has subfolders. */
+function paintLegend(
+	container: HTMLElement,
+	entries: { label: string; value: number; alpha: number }[],
+	meta: Map<string, SliceMeta>,
+	rgb: Rgb,
+	onDrill: (target: string) => void,
+): void {
 	const legend = container.createDiv("hearth-folderchart-legend");
-	for (const bar of bars) {
-		const target = drillTarget(meta.get(bar.label));
+	for (const item of entries) {
+		const target = drillTarget(meta.get(item.label));
 		const entry = legend.createDiv("hearth-folderchart-legend-entry");
 		if (target) {
 			entry.addClass("is-drillable");
 			entry.addEventListener("click", () => onDrill(target));
 		}
 		const swatch = entry.createDiv("hearth-folderchart-legend-swatch");
-		swatch.style.backgroundColor = rgba(rgb, fillAlpha((bar.outerRadius - R_INNER) / TRACK));
-		entry.createSpan({ cls: "hearth-folderchart-legend-label", text: bar.label });
-		entry.createSpan({ cls: "hearth-folderchart-legend-value", text: String(bar.value) });
+		swatch.style.backgroundColor = rgba(rgb, item.alpha);
+		entry.createSpan({ cls: "hearth-folderchart-legend-label", text: item.label });
+		entry.createSpan({ cls: "hearth-folderchart-legend-value", text: String(item.value) });
 	}
 }
 
@@ -257,8 +339,9 @@ export function folderChartEditor(ctx: CardEditorContext, containerEl: HTMLEleme
 		.addDropdown((d) => {
 			d.addOption("radial", t().editors.folderchart.styleRadial);
 			d.addOption("bars", t().editors.folderchart.styleBars);
+			d.addOption("pie", t().editors.folderchart.stylePie);
 			d.setValue(cfg.style ?? "radial").onChange((v) => {
-				cfg.style = v === "bars" ? "bars" : undefined;
+				cfg.style = v === "radial" ? undefined : (v as "bars" | "pie");
 				ctx.opts.save();
 				ctx.requestRender();
 			});

@@ -3,11 +3,13 @@ import {
 	annularSectorPath,
 	barLayout,
 	niceMax,
+	pieLayout,
 	polarPoint,
 	radialLayout,
 	rollUp,
 	sortData,
 	sparklinePoints,
+	wedgePath,
 	type ChartDatum,
 } from "../src/chartbars";
 
@@ -143,6 +145,40 @@ describe("annularSectorPath", () => {
 	it("sets the large-arc flag past 180 degrees", () => {
 		expect(annularSectorPath(0, 0, 5, 10, 0, 200)).toContain("A 10 10 0 1 1");
 		expect(annularSectorPath(0, 0, 5, 10, 0, 90)).toContain("A 10 10 0 0 1");
+	});
+});
+
+describe("wedgePath", () => {
+	it("starts and ends at the centre with one arc between", () => {
+		const d = wedgePath(50, 50, 40, 0, 90);
+		expect(d.startsWith("M 50 50")).toBe(true);
+		expect(d.endsWith("Z")).toBe(true);
+		expect(d.match(/A /g)).toHaveLength(1);
+	});
+});
+
+describe("pieLayout", () => {
+	const slices = pieLayout(
+		[
+			{ label: "a", value: 60 },
+			{ label: "b", value: 30 },
+			{ label: "c", value: 10 },
+		],
+		{ cx: 100, cy: 100, radius: 90, padAngle: 0 },
+	);
+
+	it("gives each slice an angle proportional to its value", () => {
+		expect(slices.map((s) => Math.round(s.endAngle - s.startAngle))).toEqual([216, 108, 36]);
+	});
+
+	it("reports each slice's share of the whole", () => {
+		expect(slices.map((s) => s.fraction)).toEqual([0.6, 0.3, 0.1]);
+	});
+
+	it("lays slices end to end around the circle", () => {
+		expect(slices[0].startAngle).toBe(0);
+		expect(slices[1].startAngle).toBeCloseTo(216);
+		expect(slices[2].endAngle).toBeCloseTo(360);
 	});
 });
 

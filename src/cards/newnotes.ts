@@ -1,6 +1,7 @@
 import { getAllTags, Setting, TFile } from "obsidian";
 import { sparklinePoints } from "../chartbars";
 import { emptyState } from "../cardbodies";
+import { addNumberField } from "../editors";
 import { t } from "../i18n";
 import { FolderPickerModal } from "../pickers";
 import {
@@ -197,25 +198,18 @@ export function newNotesEditor(ctx: CardEditorContext, containerEl: HTMLElement)
 	const days = new Setting(containerEl)
 		.setName(t().editors.newnotes.days)
 		.setDesc(t().editors.newnotes.daysDesc);
-	days.addSlider((s) => {
-		s.setLimits(1, 365, 1)
-			.setValue(cfg.days ?? DEFAULT_DAYS)
-			.setDynamicTooltip()
-			.onChange((v) => {
-				cfg.days = v === DEFAULT_DAYS ? undefined : v;
-				ctx.opts.save();
-			});
+	addNumberField(ctx, days, {
+		value: cfg.days ?? DEFAULT_DAYS,
+		min: 1,
+		max: 365,
+		default: DEFAULT_DAYS,
+		set: (n) => {
+			cfg.days = n === DEFAULT_DAYS ? undefined : n;
+		},
+		clear: () => {
+			cfg.days = undefined;
+		},
 	});
-	days.addExtraButton((b) =>
-		b
-			.setIcon("rotate-ccw")
-			.setTooltip(t().settings.resetSlider)
-			.onClick(() => {
-				cfg.days = undefined;
-				ctx.opts.save();
-				ctx.requestRender();
-			}),
-	);
 
 	new Setting(containerEl).setName(t().editors.newnotes.showSparkline).addToggle((tg) =>
 		tg.setValue(cfg.showSparkline ?? false).onChange((v) => {

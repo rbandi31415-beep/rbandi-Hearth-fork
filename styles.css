@@ -7740,6 +7740,37 @@ body.hearth-dv-resizing {
 	font-variant-numeric: tabular-nums;
 }
 
+/* Pie */
+.hearth-folderchart-pie {
+	flex: 1 1 auto;
+	min-height: 120px;
+	display: flex;
+	justify-content: center;
+}
+
+.hearth-folderchart-slice {
+	stroke: var(--background-primary);
+	stroke-width: 1.5;
+}
+
+.hearth-folderchart-slice.is-drillable {
+	cursor: pointer;
+}
+
+.hearth-folderchart-slice.is-drillable:hover {
+	stroke: var(--text-accent);
+	stroke-width: 2;
+}
+
+.hearth-folderchart-slice-label {
+	fill: var(--text-on-accent, #fff);
+	font-size: 8px;
+	pointer-events: none;
+	paint-order: stroke;
+	stroke: rgba(0, 0, 0, 0.35);
+	stroke-width: 2px;
+}
+
 .hearth-folderchart-legend {
 	flex: 0 0 auto;
 	display: flex;

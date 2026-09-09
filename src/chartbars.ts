@@ -169,6 +169,63 @@ export function annularSectorPath(
 	].join(" ");
 }
 
+/**
+ * SVG path `d` for a pie wedge — a full sector from the centre out to `r`
+ * between two angles (degrees clockwise from top). Unlike `annularSectorPath`
+ * there is no hole.
+ */
+export function wedgePath(cx: number, cy: number, r: number, startAngle: number, endAngle: number): string {
+	const large = Math.abs(endAngle - startAngle) > 180 ? 1 : 0;
+	const start = polarPoint(cx, cy, r, startAngle);
+	const end = polarPoint(cx, cy, r, endAngle);
+	return [
+		`M ${cx} ${cy}`,
+		`L ${start.x.toFixed(3)} ${start.y.toFixed(3)}`,
+		`A ${r} ${r} 0 ${large} 1 ${end.x.toFixed(3)} ${end.y.toFixed(3)}`,
+		"Z",
+	].join(" ");
+}
+
+export interface PieSlice {
+	label: string;
+	value: number;
+	startAngle: number;
+	endAngle: number;
+	midAngle: number;
+	/** Share of the whole, 0–1. */
+	fraction: number;
+	path: string;
+}
+
+/**
+ * Lay items out as pie slices, each subtending an angle proportional to its
+ * value. `padAngle` (default 1°) trims a hairline gap between neighbours so
+ * they read apart. Non-positive values take no angle.
+ */
+export function pieLayout(
+	items: ChartDatum[],
+	opts: { cx: number; cy: number; radius: number; padAngle?: number },
+): PieSlice[] {
+	const total = items.reduce((sum, it) => sum + Math.max(0, it.value), 0) || 1;
+	const pad = opts.padAngle ?? 1;
+	let cursor = 0;
+	return items.map((it) => {
+		const sweep = (Math.max(0, it.value) / total) * 360;
+		const start = cursor + pad / 2;
+		const end = Math.max(start, cursor + sweep - pad / 2);
+		cursor += sweep;
+		return {
+			label: it.label,
+			value: it.value,
+			startAngle: start,
+			endAngle: end,
+			midAngle: (start + end) / 2,
+			fraction: it.value / total,
+			path: wedgePath(opts.cx, opts.cy, opts.radius, start, end),
+		};
+	});
+}
+
 export interface RadialBar {
 	label: string;
 	value: number;

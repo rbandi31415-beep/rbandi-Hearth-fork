@@ -667,8 +667,8 @@ export interface FolderChartConfig {
 	/** Subtrees to chart. Empty (or unset) = the whole vault. Several roots
 	 * show one bucket per root until you drill into one. */
 	roots?: string[];
-	/** Bar style. Default "radial". */
-	style?: "radial" | "bars";
+	/** Chart style. Default "radial". */
+	style?: "radial" | "bars" | "pie";
 	/** Count every file, or just markdown notes. Default "notes". */
 	include?: "notes" | "files";
 	/** Cap the number of slices, rolling the remainder into one "Other" slice.
