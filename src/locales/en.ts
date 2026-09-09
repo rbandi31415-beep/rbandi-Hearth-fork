@@ -1781,6 +1781,7 @@ export const en = {
 			created: "Notes created",
 			commits: "Commits",
 			tasksCompleted: "Tasks completed",
+			tasksScheduled: "Tasks scheduled",
 			combined: "Combined",
 		},
 		savedSearch: {
@@ -2846,6 +2847,7 @@ export const en = {
 			tasksOverdue: "Tasks overdue",
 			tasksPlanned: "Tasks planned",
 			hoursPlanned: "Hours planned",
+			orphans: "Orphans",
 		},
 		web: {
 			openInBrowser: "Open in browser",

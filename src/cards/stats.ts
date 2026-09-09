@@ -68,6 +68,11 @@ export function renderStats(view: HomeView, card: DashboardCard, body: HTMLEleme
 		builtins.includes("tasksOverdue") || builtins.includes("tasksPlanned") || builtins.includes("hoursPlanned");
 	const taskCounts = needsTaskCounts ? taskDateCounts(view.app) : { overdue: 0, planned: 0, plannedMinutes: 0 };
 
+	// Orphans: markdown notes with no resolved link in either direction — the
+	// same notion as Obsidian's graph "no links" filter. Only computed when the
+	// tile is shown; walks the link graph once to collect every linked path.
+	const orphans = builtins.includes("orphans") ? orphanNoteCount(view) : 0;
+
 	const values: Record<StatId, number> = {
 		notes,
 		attachments,
@@ -80,6 +85,7 @@ export function renderStats(view: HomeView, card: DashboardCard, body: HTMLEleme
 		// Rounded to one decimal place — a whole number of minutes almost never
 		// lands on a whole number of hours.
 		hoursPlanned: Math.round((taskCounts.plannedMinutes / 60) * 10) / 10,
+		orphans,
 	};
 	const streak = dailyNoteStreak(view);
 
@@ -155,6 +161,34 @@ function fitStatsToCard(component: Component, body: HTMLElement, grid: HTMLEleme
 	const observer = new ResizeObserver(debounce(fit, 60, true));
 	observer.observe(body);
 	component.register(() => observer.disconnect());
+}
+
+
+/**
+ * Markdown notes that neither link to anything nor are linked to — Obsidian's
+ * graph "no links" set. A note counts as connected if it has any outgoing link
+ * (resolved or not) or appears as the target of another note's resolved link;
+ * everything else in the vault's markdown file list is an orphan.
+ */
+function orphanNoteCount(view: HomeView): number {
+	const cache = view.app.metadataCache;
+	const resolved = cache.resolvedLinks ?? {};
+	const unresolved = cache.unresolvedLinks ?? {};
+	const connected = new Set<string>();
+	for (const [source, targets] of Object.entries(resolved)) {
+		const keys = Object.keys(targets);
+		if (keys.length === 0) continue;
+		connected.add(source);
+		for (const target of keys) connected.add(target);
+	}
+	for (const [source, targets] of Object.entries(unresolved)) {
+		if (Object.keys(targets).length > 0) connected.add(source);
+	}
+	let orphans = 0;
+	for (const file of view.app.vault.getMarkdownFiles()) {
+		if (!connected.has(file.path)) orphans++;
+	}
+	return orphans;
 }
 
 

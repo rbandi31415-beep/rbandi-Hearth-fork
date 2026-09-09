@@ -1055,6 +1055,28 @@ export function tasksCompletedByDay(app: App): Map<string, number> {
 
 
 /**
+ * Scheduled-date counts per local day, for the heatmap/trend "tasks
+ * scheduled" metric. Each task contributes its own `scheduled` date; a
+ * recurring task counts only its anchor date, not its unrolled occurrences —
+ * the same simplification `tasksCompletedByDay` makes. Archived tasks are
+ * skipped; a done task still counts on the day it was scheduled for.
+ */
+export function tasksScheduledByDay(app: App): Map<string, number> {
+	const counts = new Map<string, number>();
+	if (!taskNotesEnabled(app)) return counts;
+	const setup = readTaskNotesSetup(app);
+	for (const task of collectTaskNotesTasks(app, setup)) {
+		if (task.archived || !task.scheduled) continue;
+		const at = parseTaskDate(task.scheduled);
+		if (!at) continue;
+		const key = localDayKey(at.ms);
+		counts.set(key, (counts.get(key) ?? 0) + 1);
+	}
+	return counts;
+}
+
+
+/**
  * Counts (and planned hours) for the "tasks overdue" / "tasks planned" /
  * "hours planned" stats: not-done tasks whose effective date (due, falling
  * back to scheduled) is in the past or the future relative to today. A task

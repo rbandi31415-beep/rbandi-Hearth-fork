@@ -304,6 +304,7 @@ export function heatmapEditor(ctx: CardEditorContext, containerEl: HTMLElement):
 			d.addOption("created", t().editors.metricOptions.created);
 			d.addOption("commits", t().editors.metricOptions.commits);
 			d.addOption("tasksCompleted", t().editors.metricOptions.tasksCompleted);
+			d.addOption("tasksScheduled", t().editors.metricOptions.tasksScheduled);
 			d.addOption("combined", t().editors.metricOptions.combined);
 			d.setValue(cfg.metric ?? "modified").onChange((v) => {
 				cfg.metric = v === "modified" ? undefined : (v as NonNullable<typeof cfg.metric>);

@@ -1,7 +1,7 @@
 import { activityByDay, moment, type Moment } from "../cardbodies";
 import { commitsByDay } from "../git";
 import { t } from "../i18n";
-import { tasksCompletedByDay } from "../tasknotes";
+import { tasksCompletedByDay, tasksScheduledByDay } from "../tasknotes";
 import { type HeatmapMetric } from "../types";
 import { type HomeView } from "../view";
 
@@ -16,7 +16,13 @@ export type Rgb = [number, number, number];
 
 /** Every combinable metric, in a fixed order so pickers and the heatmap's
  * split-cell stripe order never shuffle around as things are toggled. */
-export const ALL_ACTIVITY_METRICS: HeatmapMetric[] = ["modified", "created", "commits", "tasksCompleted"];
+export const ALL_ACTIVITY_METRICS: HeatmapMetric[] = [
+	"modified",
+	"created",
+	"commits",
+	"tasksCompleted",
+	"tasksScheduled",
+];
 
 /** The default hue for a metric that isn't "modified" and has no custom
  * colour set — chosen distinct enough from each other to read apart when
@@ -26,6 +32,7 @@ export const DEFAULT_METRIC_HUE: Record<Exclude<HeatmapMetric, "modified">, numb
 	created: 150,
 	commits: 265,
 	tasksCompleted: 35,
+	tasksScheduled: 200,
 };
 
 /** Standard HSL → sRGB conversion (h in degrees, s/l in percent). */
@@ -104,6 +111,8 @@ export function metricWord(metric: HeatmapMetric): string {
 			return t().editors.metricOptions.commits;
 		case "tasksCompleted":
 			return t().editors.metricOptions.tasksCompleted;
+		case "tasksScheduled":
+			return t().editors.metricOptions.tasksScheduled;
 	}
 }
 
@@ -119,6 +128,8 @@ export async function metricByDay(view: HomeView, metric: HeatmapMetric): Promis
 			return commitsByDay(view.app);
 		case "tasksCompleted":
 			return tasksCompletedByDay(view.app);
+		case "tasksScheduled":
+			return tasksScheduledByDay(view.app);
 	}
 }
 

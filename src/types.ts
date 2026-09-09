@@ -604,7 +604,7 @@ export interface SearchBarConfig {
 /** Per-card configuration for a "heatmap" (activity) card. */
 /** A single heatmap metric — one bucketer, one legend. "combined" isn't one
  * of these; it blends/splits a chosen set of them (see HeatmapConfig). */
-export type HeatmapMetric = "modified" | "created" | "commits" | "tasksCompleted";
+export type HeatmapMetric = "modified" | "created" | "commits" | "tasksCompleted" | "tasksScheduled";
 
 export interface HeatmapConfig {
 	/** Which timestamp to count, or "combined" to show several at once.
@@ -669,7 +669,8 @@ export type StatId =
 	| "daysUsing"
 	| "tasksOverdue"
 	| "tasksPlanned"
-	| "hoursPlanned";
+	| "hoursPlanned"
+	| "orphans";
 
 /** The built-in stats in their default display order — the fixed layout a
  * "stats" card has always shown, kept in one place so a card with no advanced
@@ -687,7 +688,14 @@ export const DEFAULT_STATS: StatId[] = [
  * DEFAULT_STATS with opt-in stats a user can turn on in advanced mode. Must
  * begin with DEFAULT_STATS in the same order so "all defaults selected" round
  * trips back to the unconfigured (undefined) state. */
-export const ALL_STATS: StatId[] = [...DEFAULT_STATS, "daysUsing", "tasksOverdue", "tasksPlanned", "hoursPlanned"];
+export const ALL_STATS: StatId[] = [
+	...DEFAULT_STATS,
+	"daysUsing",
+	"tasksOverdue",
+	"tasksPlanned",
+	"hoursPlanned",
+	"orphans",
+];
 
 /** Lucide icon id (Obsidian setIcon) for each built-in stat. Shared by the card
  * renderer and its editor so the tile icon and the editor chip never drift. */
@@ -701,6 +709,7 @@ export const STAT_ICONS: Record<StatId, string> = {
 	tasksOverdue: "alarm-clock",
 	tasksPlanned: "calendar-check",
 	hoursPlanned: "hourglass",
+	orphans: "unlink",
 };
 
 /** A user-defined stat tile that counts the files matching a query. */
