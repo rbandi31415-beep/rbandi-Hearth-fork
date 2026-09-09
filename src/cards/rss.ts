@@ -1,6 +1,6 @@
 import { Component, moment as createMoment, Notice, setIcon, Setting } from "obsidian";
 import { emptyState, feedHost } from "../cardbodies";
-import { moveItem } from "../editors";
+import { addNumberField, moveItem } from "../editors";
 import { t } from "../i18n";
 import { cachedFeed, loadFeed, type RssItem } from "../rss";
 import {
@@ -386,52 +386,36 @@ export function rssEditor(ctx: CardEditorContext, containerEl: HTMLElement): voi
 	const items = new Setting(containerEl)
 		.setName(t().editors.rss.itemLimit)
 		.setDesc(t().editors.rss.itemLimitDesc);
-	items.addSlider((s) => {
-		s.setLimits(3, 50, 1)
-			.setValue(cfg.itemLimit ?? 15)
-			.setDynamicTooltip()
-			.onChange((v) => {
-				cfg.itemLimit = v === 15 ? undefined : v;
-				ctx.opts.save();
-				ctx.opts.rerender();
-			});
+	addNumberField(ctx, items, {
+		value: cfg.itemLimit ?? 15,
+		min: 3,
+		max: 50,
+		default: 15,
+		rerender: true,
+		set: (n) => {
+			cfg.itemLimit = n === 15 ? undefined : n;
+		},
+		clear: () => {
+			cfg.itemLimit = undefined;
+		},
 	});
-	items.addExtraButton((b) =>
-		b
-			.setIcon("rotate-ccw")
-			.setTooltip(t().settings.resetSlider)
-			.onClick(() => {
-				cfg.itemLimit = undefined;
-				ctx.opts.save();
-				ctx.opts.rerender();
-				ctx.requestRender();
-			}),
-	);
 
 	const refresh = new Setting(containerEl)
 		.setName(t().editors.rss.refresh)
 		.setDesc(t().editors.rss.refreshDesc);
-	refresh.addSlider((s) => {
-		s.setLimits(0, 180, 5)
-			.setValue(cfg.refreshMin ?? 30)
-			.setDynamicTooltip()
-			.onChange((v) => {
-				cfg.refreshMin = v === 30 ? undefined : v;
-				ctx.opts.save();
-				ctx.opts.rerender();
-			});
+	addNumberField(ctx, refresh, {
+		value: cfg.refreshMin ?? 30,
+		min: 0,
+		max: 180,
+		default: 30,
+		rerender: true,
+		set: (n) => {
+			cfg.refreshMin = n === 30 ? undefined : n;
+		},
+		clear: () => {
+			cfg.refreshMin = undefined;
+		},
 	});
-	refresh.addExtraButton((b) =>
-		b
-			.setIcon("rotate-ccw")
-			.setTooltip(t().settings.resetSlider)
-			.onClick(() => {
-				cfg.refreshMin = undefined;
-				ctx.opts.save();
-				ctx.opts.rerender();
-				ctx.requestRender();
-			}),
-	);
 
 	const isCards = (cfg.layout ?? "list") === "cards";
 	if (isCards) {

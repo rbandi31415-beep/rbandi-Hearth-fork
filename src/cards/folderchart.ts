@@ -8,35 +8,49 @@ import {
 	radialLayout,
 	rollUp,
 	sortData,
+	sunburstLayout,
 } from "../chartbars";
 import { emptyState } from "../cardbodies";
-import { addResetButton, folderListEditor } from "../editors";
+import { addNumberField, addResetButton, folderListEditor } from "../editors";
 import {
 	type FolderBucket,
+	type NestedBucket,
 	bucketByFolder,
 	bucketRoots,
 	drillCrumbs,
+	nestedBuckets,
 	normalizeFolder,
 } from "../folderchart";
 import { t } from "../i18n";
 import { type DashboardCard } from "../types";
 import { type HomeView } from "../view";
 import { type CardDefinition, type CardEditorContext } from "./definition";
-import { type Rgb, accentRgb, hexToRgb, rgba, rgbToHex } from "./activityMetrics";
+import {
+	type Rgb,
+	accentRgb,
+	categoricalHues,
+	hexToRgb,
+	hslToRgb,
+	rgba,
+	rgbToHex,
+} from "./activityMetrics";
 
 
 // ---- Folder distribution chart --------------------------------------------
 //
-// Vault notes grouped by folder, drawn as a radial ("circular barplot") or a
-// horizontal bar chart. Each bar is one immediate child folder of whatever
-// folder is in view, counting every note beneath it; clicking a bar with
+// Vault notes grouped by folder, drawn four ways: radial bars, horizontal
+// bars, a flat pie, or a two-ring sunburst (top folders inside, their
+// subfolders outside). Each slice is one immediate child folder of whatever
+// folder is in view, counting every note beneath it; clicking a slice with
 // subfolders drills in, with a breadcrumb back out. Pointed at several roots
-// at once, the top level shows one bar per root.
+// at once, the top level shows one slice per root.
 //
-// Colour follows the heatmap/trend convention — one hue (the theme accent, or
-// a per-card override), each bar's fill opacity ramped by its share of the
-// largest — so a folder chart reads as magnitude, not as an unbounded
-// categorical palette, and needs no palette validation.
+// The bar and pie views colour by magnitude — one hue (theme accent or a
+// per-card override), shaded by each slice's share — so they need no palette
+// validation. The sunburst is the exception: it needs categorical hues to
+// tell top folders apart, so it spaces `categoricalHues` around the wheel
+// from the accent and shades each folder's subfolders within that hue,
+// folding anything past SUNBURST_COLOR_CAP into a neutral "Other".
 
 const DEFAULT_MAX_SLICES = 12;
 
@@ -126,6 +140,13 @@ export function renderFolderChart(view: HomeView, card: DashboardCard, body: HTM
 		return;
 	}
 
+	const plot = wrap.createDiv("hearth-folderchart-plot");
+
+	if (style === "sunburst") {
+		paintSunburst(plot, paths, buckets, sort, maxSlices, setDrill);
+		return;
+	}
+
 	const metaByLabel = new Map<string, SliceMeta>(
 		buckets.map((b) => [b.label, { path: b.path, hasChildren: b.hasChildren }]),
 	);
@@ -136,10 +157,16 @@ export function renderFolderChart(view: HomeView, card: DashboardCard, body: HTM
 	const rolled = rollUp(data, maxSlices, t().cards.folderchart.other);
 	const rgb = cfg.color ? hexToRgb(cfg.color) : accentRgb(wrap);
 
-	const plot = wrap.createDiv("hearth-folderchart-plot");
 	if (style === "bars") paintBars(plot, rolled, metaByLabel, rgb, setDrill);
 	else if (style === "pie") paintPie(plot, rolled, metaByLabel, rgb, setDrill);
 	else paintRadial(plot, rolled, metaByLabel, rgb, setDrill);
+}
+
+/** Order a folder-bucket list by the card's sort choice. */
+function bucketComparator(sort: "count" | "name"): (a: FolderBucket, b: FolderBucket) => number {
+	return sort === "name"
+		? (a, b) => a.label.localeCompare(b.label)
+		: (a, b) => b.count - a.count || a.label.localeCompare(b.label);
 }
 
 /** Whether a slice can be drilled into (a real folder with subfolders below). */
@@ -310,6 +337,138 @@ function paintLegend(
 	}
 }
 
+/** Beyond this many top folders the hue wheel stops reading apart, so the
+ * remainder folds into one neutral "Other" arc regardless of Max slices. */
+const SUNBURST_COLOR_CAP = 8;
+
+interface SunburstEntry {
+	bucket: NestedBucket;
+	/** The neutral roll-up arc, which gets no hue and no children. */
+	isOther: boolean;
+}
+
+function paintSunburst(
+	container: HTMLElement,
+	paths: string[],
+	topBuckets: FolderBucket[],
+	sort: "count" | "name",
+	maxSlices: number,
+	onDrill: (target: string) => void,
+): void {
+	const otherLabel = t().cards.folderchart.other;
+	const nested = nestedBuckets(
+		paths,
+		[...topBuckets].sort(bucketComparator(sort)),
+		t().cards.folderchart.here,
+	);
+
+	const limit = Math.min(maxSlices > 0 ? maxSlices : nested.length, SUNBURST_COLOR_CAP + 1);
+	let entries: SunburstEntry[];
+	if (nested.length > limit) {
+		const kept = nested.slice(0, limit - 1).map((bucket) => ({ bucket, isOther: false }));
+		const rest = nested.slice(limit - 1);
+		kept.push({
+			bucket: {
+				label: otherLabel,
+				path: null,
+				count: rest.reduce((sum, b) => sum + b.count, 0),
+				hasChildren: false,
+				children: [],
+			},
+			isOther: true,
+		});
+		entries = kept;
+	} else {
+		entries = nested.map((bucket) => ({ bucket, isOther: false }));
+	}
+
+	const SIZE = 220;
+	const R_INNER = 24;
+	const R_MID = 72;
+	const R_OUTER = 106;
+
+	const wrapEl = container.createDiv("hearth-folderchart-sunburst");
+	const svg = wrapEl.createSvg("svg", {
+		cls: "hearth-folderchart-svg",
+		attr: { viewBox: `0 0 ${SIZE} ${SIZE}` },
+	});
+
+	const coloredCount = entries.filter((e) => !e.isOther).length;
+	const hues = categoricalHues(container, Math.max(1, coloredCount));
+	const arcs = sunburstLayout(
+		entries.map((e) => ({
+			label: e.bucket.label,
+			value: e.bucket.count,
+			children: e.bucket.children.map((c) => ({ label: c.label, value: c.count })),
+		})),
+		{ cx: SIZE / 2, cy: SIZE / 2, rInner: R_INNER, rMid: R_MID, rOuter: R_OUTER, padAngle: 1 },
+	);
+	const total = entries.reduce((sum, e) => sum + e.bucket.count, 0);
+
+	arcs.forEach((arc, i) => {
+		const entry = entries[i];
+		const hue = hues[i] ?? hues[0];
+		const parentRgb: Rgb = entry.isOther ? [150, 150, 150] : hslToRgb(hue, 55, 50);
+
+		const inner = svg.createSvg("path", {
+			cls: "hearth-folderchart-arc",
+			attr: { d: arc.path, fill: rgba(parentRgb, 0.9) },
+		});
+		inner.createSvg("title").textContent = `${arc.label} · ${arc.value}`;
+		if (entry.bucket.path && entry.bucket.hasChildren) {
+			inner.addClass("is-drillable");
+			const target = entry.bucket.path;
+			inner.addEventListener("click", () => onDrill(target));
+		}
+		if (arc.endAngle - arc.startAngle >= 22) {
+			const at = polarPoint(SIZE / 2, SIZE / 2, (R_INNER + R_MID) / 2, arc.midAngle);
+			svg.createSvg("text", {
+				cls: "hearth-folderchart-arc-label",
+				attr: { x: at.x, y: at.y, "text-anchor": "middle", "dominant-baseline": "central" },
+			}).textContent = arc.label;
+		}
+
+		arc.children.forEach((seg, j) => {
+			const childBucket = entry.bucket.children[j];
+			const k = arc.children.length;
+			const light = entry.isOther ? 60 : k <= 1 ? 62 : 40 + (j / (k - 1)) * 32;
+			const childRgb: Rgb = entry.isOther ? [176, 176, 176] : hslToRgb(hue, 48, light);
+			const outer = svg.createSvg("path", {
+				cls: "hearth-folderchart-arc",
+				attr: { d: seg.path, fill: rgba(childRgb, 0.92) },
+			});
+			outer.createSvg("title").textContent = `${seg.label} · ${seg.value}`;
+			if (childBucket?.path && childBucket.hasChildren) {
+				outer.addClass("is-drillable");
+				const target = childBucket.path;
+				outer.addEventListener("click", () => onDrill(target));
+			}
+		});
+	});
+
+	svg.createSvg("text", {
+		cls: "hearth-folderchart-total",
+		attr: { x: SIZE / 2, y: SIZE / 2, "text-anchor": "middle", "dominant-baseline": "central" },
+	}).textContent = String(total);
+
+	// Legend names the inner ring (top folders) in their own colour.
+	const legend = container.createDiv("hearth-folderchart-legend");
+	entries.forEach((entry, i) => {
+		const hue = hues[i] ?? hues[0];
+		const swatchRgb: Rgb = entry.isOther ? [150, 150, 150] : hslToRgb(hue, 55, 50);
+		const el = legend.createDiv("hearth-folderchart-legend-entry");
+		if (entry.bucket.path && entry.bucket.hasChildren) {
+			el.addClass("is-drillable");
+			const target = entry.bucket.path;
+			el.addEventListener("click", () => onDrill(target));
+		}
+		const swatch = el.createDiv("hearth-folderchart-legend-swatch");
+		swatch.style.backgroundColor = rgba(swatchRgb, 0.9);
+		el.createSpan({ cls: "hearth-folderchart-legend-label", text: entry.bucket.label });
+		el.createSpan({ cls: "hearth-folderchart-legend-value", text: String(entry.bucket.count) });
+	});
+}
+
 
 export function folderChartEditor(ctx: CardEditorContext, containerEl: HTMLElement): void {
 	const cfg = (ctx.card.folderChart ??= {});
@@ -340,8 +499,9 @@ export function folderChartEditor(ctx: CardEditorContext, containerEl: HTMLEleme
 			d.addOption("radial", t().editors.folderchart.styleRadial);
 			d.addOption("bars", t().editors.folderchart.styleBars);
 			d.addOption("pie", t().editors.folderchart.stylePie);
+			d.addOption("sunburst", t().editors.folderchart.styleSunburst);
 			d.setValue(cfg.style ?? "radial").onChange((v) => {
-				cfg.style = v === "radial" ? undefined : (v as "bars" | "pie");
+				cfg.style = v === "radial" ? undefined : (v as "bars" | "pie" | "sunburst");
 				ctx.opts.save();
 				ctx.requestRender();
 			});
@@ -374,25 +534,18 @@ export function folderChartEditor(ctx: CardEditorContext, containerEl: HTMLEleme
 	const slices = new Setting(containerEl)
 		.setName(t().editors.folderchart.maxSlices)
 		.setDesc(t().editors.folderchart.maxSlicesDesc);
-	slices.addSlider((s) => {
-		s.setLimits(0, 24, 1)
-			.setValue(cfg.maxSlices ?? DEFAULT_MAX_SLICES)
-			.setDynamicTooltip()
-			.onChange((v) => {
-				cfg.maxSlices = v === DEFAULT_MAX_SLICES ? undefined : v;
-				ctx.opts.save();
-			});
+	addNumberField(ctx, slices, {
+		value: cfg.maxSlices ?? DEFAULT_MAX_SLICES,
+		min: 0,
+		max: 24,
+		default: DEFAULT_MAX_SLICES,
+		set: (n) => {
+			cfg.maxSlices = n === DEFAULT_MAX_SLICES ? undefined : n;
+		},
+		clear: () => {
+			cfg.maxSlices = undefined;
+		},
 	});
-	slices.addExtraButton((b) =>
-		b
-			.setIcon("rotate-ccw")
-			.setTooltip(t().settings.resetSlider)
-			.onClick(() => {
-				cfg.maxSlices = undefined;
-				ctx.opts.save();
-				ctx.requestRender();
-			}),
-	);
 
 	const color = new Setting(containerEl)
 		.setName(t().editors.folderchart.color)

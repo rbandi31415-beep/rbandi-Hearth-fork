@@ -1,6 +1,6 @@
 import { Setting } from "obsidian";
 import { heatLevel, moment, type Moment } from "../cardbodies";
-import { addResetButton } from "../editors";
+import { addNumberField, addResetButton } from "../editors";
 import { t } from "../i18n";
 import { type DashboardCard, type HeatmapMetric } from "../types";
 import { type HomeView } from "../view";
@@ -36,6 +36,14 @@ function resolveBaseRgb(el: HTMLElement, cfg: NonNullable<DashboardCard["heatmap
 	return cfg.color ? hexToRgb(cfg.color) : accentRgb(el);
 }
 
+/** How many weeks past the current one to show. Explicit config wins; a plain
+ * "tasks scheduled" card otherwise shows four, since it's mostly about what's
+ * coming up. Capped at 26. */
+function resolveFutureWeeks(cfg: NonNullable<DashboardCard["heatmap"]>): number {
+	if (cfg.futureWeeks !== undefined) return Math.max(0, Math.min(cfg.futureWeeks, 26));
+	return (cfg.metric ?? "modified") === "tasksScheduled" ? 4 : 0;
+}
+
 /** The visible window: `weeks` columns ending on the current (partial) week,
  * aligned to the locale's first day of the week. */
 function heatmapWindow(weeks: number): { start: Moment; todayKey: string } {
@@ -47,15 +55,22 @@ function heatmapWindow(weeks: number): { start: Moment; todayKey: string } {
 	return { start, todayKey };
 }
 
-/** The highest count on any non-future day in the window — 0 when there's no
- * activity at all. Callers that divide by this (heatLevel, share weighting)
- * need at least 1; callers displaying it (the legend) want the real,
- * possibly-zero number. */
-function windowPeak(activity: Map<string, number>, start: Moment, todayKey: string, weeks: number): number {
+/** The highest count on any day in the window — future days included only when
+ * `showFuture` is on (a "tasks scheduled" card that shows upcoming weeks needs
+ * them in the scale). 0 when there's no activity at all. Callers that divide
+ * by this (heatLevel, share weighting) need at least 1; callers displaying it
+ * (the legend) want the real, possibly-zero number. */
+function windowPeak(
+	activity: Map<string, number>,
+	start: Moment,
+	todayKey: string,
+	weeks: number,
+	showFuture = false,
+): number {
 	let peak = 0;
 	for (let i = 0; i < weeks * 7; i++) {
 		const key = start.clone().add(i, "days").format("YYYY-MM-DD");
-		if (key <= todayKey) peak = Math.max(peak, activity.get(key) ?? 0);
+		if (showFuture || key <= todayKey) peak = Math.max(peak, activity.get(key) ?? 0);
 	}
 	return peak;
 }
@@ -73,6 +88,7 @@ function paintSingleGrid(
 	rgb: Rgb,
 	peak: number,
 	label: string,
+	showFuture = false,
 ): void {
 	const divisor = Math.max(1, peak);
 	for (let w = 0; w < weeks; w++) {
@@ -80,9 +96,13 @@ function paintSingleGrid(
 			const day = start.clone().add(w * 7 + r, "days");
 			const key: string = day.format("YYYY-MM-DD");
 			const cellEl = grid.createDiv("hearth-heatmap-cell");
+			if (key === todayKey) cellEl.addClass("is-today");
 			if (key > todayKey) {
-				cellEl.addClass("is-empty");
-				continue;
+				if (!showFuture) {
+					cellEl.addClass("is-empty");
+					continue;
+				}
+				cellEl.addClass("is-future");
 			}
 			const count = activity.get(key) ?? 0;
 			if (count > 0) {
@@ -108,15 +128,20 @@ function paintSplitGrid(
 	series: Map<HeatmapMetric, Map<string, number>>,
 	colors: Map<HeatmapMetric, Rgb>,
 	peaks: Map<HeatmapMetric, number>,
+	showFuture = false,
 ): void {
 	for (let w = 0; w < weeks; w++) {
 		for (let r = 0; r < 7; r++) {
 			const day = start.clone().add(w * 7 + r, "days");
 			const key: string = day.format("YYYY-MM-DD");
 			const cellEl = grid.createDiv("hearth-heatmap-cell is-split");
+			if (key === todayKey) cellEl.addClass("is-today");
 			if (key > todayKey) {
-				cellEl.addClass("is-empty");
-				continue;
+				if (!showFuture) {
+					cellEl.addClass("is-empty");
+					continue;
+				}
+				cellEl.addClass("is-future");
 			}
 			const parts: string[] = [];
 			for (const m of metrics) {
@@ -155,6 +180,7 @@ function paintMixedGrid(
 	series: Map<HeatmapMetric, Map<string, number>>,
 	colors: Map<HeatmapMetric, Rgb>,
 	peaks: Map<HeatmapMetric, number>,
+	showFuture = false,
 ): void {
 	const blended = new Map<string, number>();
 	for (const m of metrics) {
@@ -162,16 +188,20 @@ function paintMixedGrid(
 			blended.set(key, (blended.get(key) ?? 0) + count);
 		}
 	}
-	const overallDivisor = Math.max(1, windowPeak(blended, start, todayKey, weeks));
+	const overallDivisor = Math.max(1, windowPeak(blended, start, todayKey, weeks, showFuture));
 
 	for (let w = 0; w < weeks; w++) {
 		for (let r = 0; r < 7; r++) {
 			const day = start.clone().add(w * 7 + r, "days");
 			const key: string = day.format("YYYY-MM-DD");
 			const cellEl = grid.createDiv("hearth-heatmap-cell");
+			if (key === todayKey) cellEl.addClass("is-today");
 			if (key > todayKey) {
-				cellEl.addClass("is-empty");
-				continue;
+				if (!showFuture) {
+					cellEl.addClass("is-empty");
+					continue;
+				}
+				cellEl.addClass("is-future");
 			}
 
 			const parts: string[] = [];
@@ -238,6 +268,9 @@ export function renderHeatmap(view: HomeView, card: DashboardCard, body: HTMLEle
 	const cfg = card.heatmap ?? {};
 	const metric = cfg.metric ?? "modified";
 	const weeks = cfg.weeks && cfg.weeks > 0 ? Math.min(cfg.weeks, 53) : 26;
+	const futureWeeks = resolveFutureWeeks(cfg);
+	const columns = weeks + futureWeeks;
+	const showFuture = futureWeeks > 0;
 	const combinedMetrics =
 		cfg.combinedMetrics && cfg.combinedMetrics.length > 0 ? cfg.combinedMetrics : DEFAULT_COMBINED_METRICS;
 	const metrics = metric === "combined" ? combinedMetrics : [metric];
@@ -249,13 +282,13 @@ export function renderHeatmap(view: HomeView, card: DashboardCard, body: HTMLEle
 		const wrap = body.createDiv("hearth-heatmap");
 		const { start, todayKey } = heatmapWindow(weeks);
 		const grid = wrap.createDiv("hearth-heatmap-grid");
-		grid.style.gridTemplateColumns = `repeat(${weeks}, 1fr)`;
+		grid.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
 
 		if (metric !== "combined") {
 			const rgb = resolveBaseRgb(grid, cfg);
 			const activity = series.get(metric) ?? new Map<string, number>();
-			const peak = windowPeak(activity, start, todayKey, weeks);
-			paintSingleGrid(grid, weeks, start, todayKey, activity, rgb, peak, metricWord(metric));
+			const peak = windowPeak(activity, start, todayKey, columns, showFuture);
+			paintSingleGrid(grid, columns, start, todayKey, activity, rgb, peak, metricWord(metric), showFuture);
 			renderLegend(wrap, [{ rgb, peak }]);
 			return;
 		}
@@ -269,8 +302,8 @@ export function renderHeatmap(view: HomeView, card: DashboardCard, body: HTMLEle
 					blended.set(key, (blended.get(key) ?? 0) + count);
 				}
 			}
-			const peak = windowPeak(blended, start, todayKey, weeks);
-			paintSingleGrid(grid, weeks, start, todayKey, blended, rgb, peak, t().cards.heatmap.combinedLabel);
+			const peak = windowPeak(blended, start, todayKey, columns, showFuture);
+			paintSingleGrid(grid, columns, start, todayKey, blended, rgb, peak, t().cards.heatmap.combinedLabel, showFuture);
 			renderLegend(wrap, [{ rgb, peak, label: t().cards.heatmap.combinedLabel }]);
 			return;
 		}
@@ -280,12 +313,15 @@ export function renderHeatmap(view: HomeView, card: DashboardCard, body: HTMLEle
 		// shared scale that would misrepresent several different metrics as one.
 		const colors = new Map<HeatmapMetric, Rgb>(metrics.map((m) => [m, resolveMetricRgb(grid, m, cfg.metricColors)]));
 		const peaks = new Map<HeatmapMetric, number>(
-			metrics.map((m) => [m, windowPeak(series.get(m) ?? new Map<string, number>(), start, todayKey, weeks)]),
+			metrics.map((m) => [
+				m,
+				windowPeak(series.get(m) ?? new Map<string, number>(), start, todayKey, columns, showFuture),
+			]),
 		);
 		if (combinedStyle === "split") {
-			paintSplitGrid(grid, weeks, start, todayKey, metrics, series, colors, peaks);
+			paintSplitGrid(grid, columns, start, todayKey, metrics, series, colors, peaks, showFuture);
 		} else {
-			paintMixedGrid(grid, weeks, start, todayKey, metrics, series, colors, peaks);
+			paintMixedGrid(grid, columns, start, todayKey, metrics, series, colors, peaks, showFuture);
 		}
 		renderLegend(
 			wrap,
@@ -413,25 +449,34 @@ export function heatmapEditor(ctx: CardEditorContext, containerEl: HTMLElement):
 	const weeks = new Setting(containerEl)
 		.setName(t().editors.heatmap.weeks)
 		.setDesc(t().editors.heatmap.weeksDesc);
-	weeks.addSlider((s) => {
-		s.setLimits(1, 53, 1)
-			.setValue(cfg.weeks ?? 26)
-			.setDynamicTooltip()
-			.onChange((v) => {
-				cfg.weeks = v === 26 ? undefined : v;
-				ctx.opts.save();
-			});
+	addNumberField(ctx, weeks, {
+		value: cfg.weeks ?? 26,
+		min: 1,
+		max: 53,
+		default: 26,
+		set: (n) => {
+			cfg.weeks = n === 26 ? undefined : n;
+		},
+		clear: () => {
+			cfg.weeks = undefined;
+		},
 	});
-	weeks.addExtraButton((b) =>
-		b
-			.setIcon("rotate-ccw")
-			.setTooltip(t().settings.resetSlider)
-			.onClick(() => {
-				cfg.weeks = undefined;
-				ctx.opts.save();
-				ctx.requestRender();
-			}),
-	);
+
+	const future = new Setting(containerEl)
+		.setName(t().editors.heatmap.futureWeeks)
+		.setDesc(t().editors.heatmap.futureWeeksDesc);
+	addNumberField(ctx, future, {
+		value: resolveFutureWeeks(cfg),
+		min: 0,
+		max: 26,
+		default: resolveFutureWeeks({ ...cfg, futureWeeks: undefined }),
+		set: (n) => {
+			cfg.futureWeeks = n;
+		},
+		clear: () => {
+			cfg.futureWeeks = undefined;
+		},
+	});
 }
 
 /** A calendar-style activity heatmap over one or several vault/git/task

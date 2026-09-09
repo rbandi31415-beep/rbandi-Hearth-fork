@@ -9,6 +9,7 @@ import {
 	rollUp,
 	sortData,
 	sparklinePoints,
+	sunburstLayout,
 	wedgePath,
 	type ChartDatum,
 } from "../src/chartbars";
@@ -179,6 +180,39 @@ describe("pieLayout", () => {
 		expect(slices[0].startAngle).toBe(0);
 		expect(slices[1].startAngle).toBeCloseTo(216);
 		expect(slices[2].endAngle).toBeCloseTo(360);
+	});
+});
+
+describe("sunburstLayout", () => {
+	const arcs = sunburstLayout(
+		[
+			{ label: "Knowledge", value: 60, children: [
+				{ label: "Physics", value: 40 },
+				{ label: "Chemistry", value: 20 },
+			] },
+			{ label: "People", value: 40, children: [{ label: "(here)", value: 40 }] },
+		],
+		{ cx: 100, cy: 100, rInner: 20, rMid: 60, rOuter: 100, padAngle: 0 },
+	);
+
+	it("sizes inner arcs by value and reports each share", () => {
+		expect(arcs.map((a) => Math.round(a.endAngle - a.startAngle))).toEqual([216, 144]);
+		expect(arcs.map((a) => a.fraction)).toEqual([0.6, 0.4]);
+	});
+
+	it("splits each arc's span across its children by child value", () => {
+		const [knowledge] = arcs;
+		expect(knowledge.children.map((c) => Math.round(c.endAngle - c.startAngle))).toEqual([144, 72]);
+		// children stay within the parent's angular span
+		expect(knowledge.children[0].startAngle).toBeCloseTo(knowledge.startAngle);
+		expect(knowledge.children.at(-1)?.endAngle).toBeCloseTo(knowledge.endAngle);
+	});
+
+	it("gives every segment a path", () => {
+		for (const arc of arcs) {
+			expect(arc.path.startsWith("M ")).toBe(true);
+			for (const child of arc.children) expect(child.path.startsWith("M ")).toBe(true);
+		}
 	});
 });
 

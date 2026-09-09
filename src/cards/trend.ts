@@ -1,6 +1,6 @@
 import { Setting } from "obsidian";
 import { moment, type Moment } from "../cardbodies";
-import { addResetButton } from "../editors";
+import { addNumberField, addResetButton } from "../editors";
 import { t } from "../i18n";
 import { type DashboardCard, type HeatmapMetric, type TrendConfig } from "../types";
 import { type HomeView } from "../view";
@@ -380,45 +380,33 @@ export function trendEditor(ctx: CardEditorContext, containerEl: HTMLElement): v
 		const avg = new Setting(containerEl)
 			.setName(t().editors.trend.rollingAvg)
 			.setDesc(t().editors.trend.rollingAvgDesc);
-		avg.addSlider((s) => {
-			s.setLimits(0, 60, 1)
-				.setValue(cfg.rollingAvg ?? DEFAULT_ROLLING_AVG)
-				.onChange((v) => {
-					cfg.rollingAvg = v === DEFAULT_ROLLING_AVG ? undefined : v;
-					ctx.opts.save();
-				});
+		addNumberField(ctx, avg, {
+			value: cfg.rollingAvg ?? DEFAULT_ROLLING_AVG,
+			min: 0,
+			max: 60,
+			default: DEFAULT_ROLLING_AVG,
+			set: (n) => {
+				cfg.rollingAvg = n === DEFAULT_ROLLING_AVG ? undefined : n;
+			},
+			clear: () => {
+				cfg.rollingAvg = undefined;
+			},
 		});
-		avg.addExtraButton((b) =>
-			b
-				.setIcon("rotate-ccw")
-				.setTooltip(t().settings.resetSlider)
-				.onClick(() => {
-					cfg.rollingAvg = undefined;
-					ctx.opts.save();
-					ctx.requestRender();
-				}),
-		);
 	}
 
 	const days = new Setting(containerEl).setName(t().editors.trend.days).setDesc(t().editors.trend.daysDesc);
-	days.addSlider((s) => {
-		s.setLimits(14, 365, 1)
-			.setValue(cfg.days ?? 90)
-			.onChange((v) => {
-				cfg.days = v === 90 ? undefined : v;
-				ctx.opts.save();
-			});
+	addNumberField(ctx, days, {
+		value: cfg.days ?? 90,
+		min: 14,
+		max: 365,
+		default: 90,
+		set: (n) => {
+			cfg.days = n === 90 ? undefined : n;
+		},
+		clear: () => {
+			cfg.days = undefined;
+		},
 	});
-	days.addExtraButton((b) =>
-		b
-			.setIcon("rotate-ccw")
-			.setTooltip(t().settings.resetSlider)
-			.onClick(() => {
-				cfg.days = undefined;
-				ctx.opts.save();
-				ctx.requestRender();
-			}),
-	);
 }
 
 /** A line graph of one vault/git/task activity metric over time — the

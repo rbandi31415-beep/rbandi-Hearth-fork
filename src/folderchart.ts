@@ -108,6 +108,29 @@ export function bucketRoots(paths: string[], roots: string[], vaultLabel: string
 		.filter((bucket) => bucket.count > 0);
 }
 
+/** A top-level slice with its immediate subfolders attached — the shape the
+ * sunburst view draws. */
+export interface NestedBucket extends FolderBucket {
+	children: FolderBucket[];
+}
+
+/**
+ * Attach one more level to a set of top-level buckets: each bucket that names
+ * a real folder gets its immediate children (via `bucketByFolder`), so the
+ * sunburst can show two rings without the card walking the tree itself. The
+ * "files directly here" bucket (null path) keeps an empty child list.
+ */
+export function nestedBuckets(
+	paths: string[],
+	topBuckets: FolderBucket[],
+	rootFilesLabel: string,
+): NestedBucket[] {
+	return topBuckets.map((top) => ({
+		...top,
+		children: top.path ? bucketByFolder(paths, top.path, rootFilesLabel) : [],
+	}));
+}
+
 /** A breadcrumb step: `target` is the drill path to jump to, or null for the
  * card's initial view. */
 export interface Crumb {

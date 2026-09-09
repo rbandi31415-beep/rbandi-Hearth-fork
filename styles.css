@@ -7384,6 +7384,18 @@ body.hearth-dv-resizing {
 	background: transparent;
 }
 
+/* Days after today, shown when the card extends into the future (e.g. the
+   "tasks scheduled" metric). Shaded like any other day but outlined so the
+   past/future split reads at a glance. */
+.hearth-heatmap-cell.is-future {
+	outline: 1px dashed var(--background-modifier-border);
+	outline-offset: -1px;
+}
+
+.hearth-heatmap-cell.is-today {
+	box-shadow: 0 0 0 1.5px var(--text-accent);
+}
+
 .hearth-heatmap-cell.is-split {
 	display: flex;
 	gap: 1px;
@@ -7768,6 +7780,37 @@ body.hearth-dv-resizing {
 	pointer-events: none;
 	paint-order: stroke;
 	stroke: rgba(0, 0, 0, 0.35);
+	stroke-width: 2px;
+}
+
+/* Sunburst (nested pie) */
+.hearth-folderchart-sunburst {
+	flex: 1 1 auto;
+	min-height: 140px;
+	display: flex;
+	justify-content: center;
+}
+
+.hearth-folderchart-arc {
+	stroke: var(--background-primary);
+	stroke-width: 1;
+}
+
+.hearth-folderchart-arc.is-drillable {
+	cursor: pointer;
+}
+
+.hearth-folderchart-arc.is-drillable:hover {
+	stroke: var(--text-accent);
+	stroke-width: 1.75;
+}
+
+.hearth-folderchart-arc-label {
+	fill: var(--text-on-accent, #fff);
+	font-size: 7.5px;
+	pointer-events: none;
+	paint-order: stroke;
+	stroke: rgba(0, 0, 0, 0.4);
 	stroke-width: 2px;
 }
 

@@ -136,7 +136,7 @@ export function newNotesEditor(ctx: CardEditorContext, containerEl: HTMLElement)
 			.setDesc(t().editors.newnotes.tagDesc)
 			.addText((txt) =>
 				txt
-					.setPlaceholder("#person")
+					.setPlaceholder(t().editors.newnotes.tagPlaceholder)
 					.setValue(cfg.tag ?? "")
 					.onChange((v) => {
 						cfg.tag = v.trim() || undefined;
@@ -174,7 +174,7 @@ export function newNotesEditor(ctx: CardEditorContext, containerEl: HTMLElement)
 			.setDesc(t().editors.newnotes.propertyKeyDesc)
 			.addText((txt) =>
 				txt
-					.setPlaceholder("type")
+					.setPlaceholder(t().editors.newnotes.propertyKeyPlaceholder)
 					.setValue(cfg.propertyKey ?? "")
 					.onChange((v) => {
 						cfg.propertyKey = v.trim() || undefined;

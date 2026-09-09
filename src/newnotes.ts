@@ -29,12 +29,22 @@ export type NewNotesScope =
 
 const MS_PER_DAY = 86_400_000;
 
+/** One frontmatter value (or number/boolean) as a lower-cased string, or null
+ * when it isn't a comparable scalar. */
+function scalarString(value: unknown): string | null {
+	if (typeof value === "string") return value.trim().toLowerCase();
+	if (typeof value === "number" || typeof value === "boolean") return String(value).toLowerCase();
+	return null;
+}
+
 /** A frontmatter value as a list of comparable strings: a scalar becomes one
- * entry, a YAML list becomes its entries, everything else nothing. */
+ * entry, a YAML list becomes its scalar entries, everything else nothing. */
 function fmStrings(raw: unknown): string[] {
-	if (Array.isArray(raw)) return raw.filter((v) => v != null).map((v) => String(v).trim().toLowerCase());
-	if (raw == null || typeof raw === "object") return [];
-	return [String(raw).trim().toLowerCase()];
+	if (Array.isArray(raw)) {
+		return raw.map(scalarString).filter((v): v is string => v !== null);
+	}
+	const one = scalarString(raw);
+	return one === null ? [] : [one];
 }
 
 /** Whether a note falls in the card's scope. */

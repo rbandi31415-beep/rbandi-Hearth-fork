@@ -614,6 +614,11 @@ export interface HeatmapConfig {
 	metric?: HeatmapMetric | "combined";
 	/** How many weeks back to show. Default 26. */
 	weeks?: number;
+	/** How many weeks *past* the current one to also show — for a
+	 * forward-looking metric like "tasks scheduled". Default 0, except a plain
+	 * tasksScheduled card defaults to 4. Future cells are shaded like any
+	 * other; an explicit 0 turns the extension off. */
+	futureWeeks?: number;
 	/** metric === "combined": which metrics to include. Default
 	 * modified+created+commits. */
 	combinedMetrics?: HeatmapMetric[];
@@ -667,8 +672,9 @@ export interface FolderChartConfig {
 	/** Subtrees to chart. Empty (or unset) = the whole vault. Several roots
 	 * show one bucket per root until you drill into one. */
 	roots?: string[];
-	/** Chart style. Default "radial". */
-	style?: "radial" | "bars" | "pie";
+	/** Chart style. Default "radial". "sunburst" is a two-ring pie — top
+	 * folders in the inner ring, their subfolders in the outer. */
+	style?: "radial" | "bars" | "pie" | "sunburst";
 	/** Count every file, or just markdown notes. Default "notes". */
 	include?: "notes" | "files";
 	/** Cap the number of slices, rolling the remainder into one "Other" slice.

@@ -226,6 +226,82 @@ export function pieLayout(
 	});
 }
 
+export interface SunburstSegment {
+	label: string;
+	value: number;
+	startAngle: number;
+	endAngle: number;
+	midAngle: number;
+	/** SVG path `d` for the ring segment. */
+	path: string;
+}
+
+export interface SunburstArc extends SunburstSegment {
+	/** Share of the whole, 0–1. */
+	fraction: number;
+	/** Outer-ring segments, filling this arc's angular span in proportion to
+	 * their own values. */
+	children: SunburstSegment[];
+}
+
+/**
+ * A two-ring sunburst: `items` become the inner ring (angle ∝ value), and each
+ * item's `children` split its wedge across the outer ring. Children are
+ * expected to sum to their parent's value (the caller includes a
+ * "files directly here" child); any shortfall just leaves a gap.
+ */
+export function sunburstLayout(
+	items: { label: string; value: number; children: { label: string; value: number }[] }[],
+	opts: {
+		cx: number;
+		cy: number;
+		rInner: number;
+		rMid: number;
+		rOuter: number;
+		padAngle?: number;
+	},
+): SunburstArc[] {
+	const total = items.reduce((sum, it) => sum + Math.max(0, it.value), 0) || 1;
+	const pad = opts.padAngle ?? 1;
+	let cursor = 0;
+
+	return items.map((it) => {
+		const sweep = (Math.max(0, it.value) / total) * 360;
+		const start = cursor + pad / 2;
+		const end = Math.max(start, cursor + sweep - pad / 2);
+		cursor += sweep;
+		const span = end - start;
+
+		const childTotal = it.children.reduce((sum, c) => sum + Math.max(0, c.value), 0) || 1;
+		let childCursor = start;
+		const children: SunburstSegment[] = it.children.map((c) => {
+			const cSweep = (Math.max(0, c.value) / childTotal) * span;
+			const cStart = childCursor;
+			const cEnd = childCursor + cSweep;
+			childCursor = cEnd;
+			return {
+				label: c.label,
+				value: c.value,
+				startAngle: cStart,
+				endAngle: cEnd,
+				midAngle: (cStart + cEnd) / 2,
+				path: annularSectorPath(opts.cx, opts.cy, opts.rMid, opts.rOuter, cStart, cEnd),
+			};
+		});
+
+		return {
+			label: it.label,
+			value: it.value,
+			startAngle: start,
+			endAngle: end,
+			midAngle: (start + end) / 2,
+			fraction: it.value / total,
+			path: annularSectorPath(opts.cx, opts.cy, opts.rInner, opts.rMid, start, end),
+			children,
+		};
+	});
+}
+
 export interface RadialBar {
 	label: string;
 	value: number;

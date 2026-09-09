@@ -3,6 +3,7 @@ import {
 	bucketByFolder,
 	bucketRoots,
 	drillCrumbs,
+	nestedBuckets,
 	normalizeFolder,
 } from "../src/folderchart";
 
@@ -66,6 +67,25 @@ describe("bucketRoots", () => {
 
 	it("drops a root that matches no files", () => {
 		expect(bucketRoots(paths, ["People", "Templates"], "Vault").map((b) => b.label)).toEqual(["People"]);
+	});
+});
+
+describe("nestedBuckets", () => {
+	it("attaches each top folder's immediate children", () => {
+		const top = bucketByFolder(paths, "", "(here)");
+		const nested = nestedBuckets(paths, top, "(here)");
+		const knowledge = nested.find((n) => n.label === "Knowledge");
+		expect(knowledge?.children.map((c) => [c.label, c.count])).toEqual([
+			["Physics", 2],
+			["Chemistry", 1],
+			["(here)", 1],
+		]);
+	});
+
+	it("leaves the files-here bucket childless", () => {
+		const top = bucketByFolder(paths, "", "(here)");
+		const nested = nestedBuckets(paths, top, "(here)");
+		expect(nested.find((n) => n.path === null)?.children).toEqual([]);
 	});
 });
 

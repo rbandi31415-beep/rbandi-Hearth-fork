@@ -430,9 +430,16 @@ export function addNumberField(
 		placeholder?: string;
 		set: (n: number) => void;
 		clear: () => void;
+		/** Also redraw the card on every change (a live preview), the way a few
+		 * sliders do. Off by default — most number fields apply on modal close. */
+		rerender?: boolean;
 	},
 ): void {
 	const clamp = (n: number): number => Math.max(opts.min, Math.min(opts.max, Math.round(n)));
+	const applied = (): void => {
+		ctx.opts.save();
+		if (opts.rerender) ctx.opts.rerender();
+	};
 
 	setting.addText((txt) => {
 		txt.setValue(String(opts.value));
@@ -443,7 +450,7 @@ export function addNumberField(
 			const n = Number(trimmed);
 			if (!Number.isFinite(n)) return;
 			opts.set(clamp(n));
-			ctx.opts.save();
+			applied();
 		});
 
 		const input = txt.inputEl;
@@ -456,18 +463,27 @@ export function addNumberField(
 			const trimmed = input.value.trim();
 			if (trimmed === "") {
 				opts.clear();
-				ctx.opts.save();
+				applied();
 				ctx.requestRender();
 				return;
 			}
 			const n = clamp(Number(trimmed) || opts.default);
 			input.value = String(n);
 			opts.set(n);
-			ctx.opts.save();
+			applied();
 		});
 	});
 
-	addResetButton(ctx, setting, t().settings.resetSlider, opts.clear);
+	setting.addExtraButton((b) =>
+		b
+			.setIcon("rotate-ccw")
+			.setTooltip(t().settings.resetSlider)
+			.onClick(() => {
+				opts.clear();
+				applied();
+				ctx.requestRender();
+			}),
+	);
 }
 
 

@@ -45,15 +45,38 @@ export function hslToRgb(h: number, s: number, l: number): Rgb {
 	return [Math.round(255 * f(0)), Math.round(255 * f(8)), Math.round(255 * f(4))];
 }
 
-/** The theme's current accent colour, read once per render from an element's
- * computed style (falls back to Obsidian's default violet-blue if the custom
- * properties aren't set for some reason). */
-export function accentRgb(el: HTMLElement): Rgb {
+/** The theme's current accent colour as HSL (h in degrees, s/l in percent),
+ * read from an element's computed style. Falls back to Obsidian's default
+ * violet-blue if the custom properties aren't set. */
+export function accentHsl(el: HTMLElement): [number, number, number] {
 	const style = getComputedStyle(el);
 	const h = parseFloat(style.getPropertyValue("--accent-h"));
 	const s = parseFloat(style.getPropertyValue("--accent-s"));
 	const l = parseFloat(style.getPropertyValue("--accent-l"));
-	return hslToRgb(Number.isFinite(h) ? h : 266, Number.isFinite(s) ? s : 84, Number.isFinite(l) ? l : 62);
+	return [
+		Number.isFinite(h) ? h : 266,
+		Number.isFinite(s) ? s : 84,
+		Number.isFinite(l) ? l : 62,
+	];
+}
+
+/** The theme's current accent colour, read once per render from an element's
+ * computed style. */
+export function accentRgb(el: HTMLElement): Rgb {
+	return hslToRgb(...accentHsl(el));
+}
+
+/**
+ * `n` hues (degrees) for a categorical chart, spaced evenly around the wheel
+ * from the theme accent hue — so the palette follows the theme and the first
+ * colour is always the familiar accent. Meant for a small `n` (cap it at ~8
+ * and fold the rest into a neutral slice); past that the hues stop reading
+ * apart.
+ */
+export function categoricalHues(el: HTMLElement, n: number): number[] {
+	const [baseH] = accentHsl(el);
+	const count = Math.max(1, n);
+	return Array.from({ length: count }, (_, i) => (baseH + (i * 360) / count) % 360);
 }
 
 /** "#rrggbb" (or "#rgb") → RGB. Malformed input falls back to mid-grey rather
