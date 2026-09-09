@@ -1826,6 +1826,8 @@ export const en = {
 			queryPlaceholder: "#project or status:active",
 			addCount: "Add count",
 			removeCount: "Remove count",
+			staleDays: "Stale after (days)",
+			staleDaysDesc: "How long since a note's last edit before it counts toward the Stale notes tile.",
 		},
 		metricOptions: {
 			modified: "Notes edited",
@@ -2912,6 +2914,10 @@ export const en = {
 			tasksPlanned: "Tasks planned",
 			hoursPlanned: "Hours planned",
 			orphans: "Orphans",
+			brokenLinks: "Broken links",
+			totalLinks: "Links",
+			staleNotes: "Stale notes",
+			vaultSize: "Vault size",
 		},
 		web: {
 			openInBrowser: "Open in browser",

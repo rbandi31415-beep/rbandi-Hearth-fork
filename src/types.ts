@@ -719,7 +719,11 @@ export type StatId =
 	| "tasksOverdue"
 	| "tasksPlanned"
 	| "hoursPlanned"
-	| "orphans";
+	| "orphans"
+	| "brokenLinks"
+	| "totalLinks"
+	| "staleNotes"
+	| "vaultSize";
 
 /** The built-in stats in their default display order — the fixed layout a
  * "stats" card has always shown, kept in one place so a card with no advanced
@@ -744,6 +748,10 @@ export const ALL_STATS: StatId[] = [
 	"tasksPlanned",
 	"hoursPlanned",
 	"orphans",
+	"brokenLinks",
+	"totalLinks",
+	"staleNotes",
+	"vaultSize",
 ];
 
 /** Lucide icon id (Obsidian setIcon) for each built-in stat. Shared by the card
@@ -759,6 +767,10 @@ export const STAT_ICONS: Record<StatId, string> = {
 	tasksPlanned: "calendar-check",
 	hoursPlanned: "hourglass",
 	orphans: "unlink",
+	brokenLinks: "unplug",
+	totalLinks: "link",
+	staleNotes: "history",
+	vaultSize: "hard-drive",
 };
 
 /** A user-defined stat tile that counts the files matching a query. */
@@ -790,6 +802,9 @@ export interface StatsConfig {
 	attachmentTypes?: string[];
 	/** User-defined query-count tiles. Only consulted when `advanced` is on. */
 	queries?: StatsQuery[];
+	/** How many days since a note's last edit before it counts toward the
+	 * "Stale notes" tile. Default 180. */
+	staleDays?: number;
 	/** Shrink tile icon/text size just enough that every tile fits the card
 	 * without scrolling, however many are selected. Off (default) keeps tiles
 	 * at their normal size, which can overflow a small card once enough are
