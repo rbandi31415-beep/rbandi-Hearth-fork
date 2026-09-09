@@ -29,6 +29,7 @@ export type CardKind =
 	| "searchbar"
 	| "heatmap"
 	| "trend"
+	| "folderchart"
 	| "calculator"
 	| "dataview"
 	| "datacore"
@@ -657,6 +658,25 @@ export interface TrendConfig {
 	/** Group points by day or by week. Undefined auto-picks: day for windows up
 	 * to 120 days, week beyond, so a long span stays readable. */
 	bucket?: "day" | "week";
+}
+
+/** Per-card configuration for a "folderchart" card — vault notes grouped by
+ * folder, drawn as a radial or horizontal bar chart you can drill into. */
+export interface FolderChartConfig {
+	/** Subtrees to chart. Empty (or unset) = the whole vault. Several roots
+	 * show one bucket per root until you drill into one. */
+	roots?: string[];
+	/** Bar style. Default "radial". */
+	style?: "radial" | "bars";
+	/** Count every file, or just markdown notes. Default "notes". */
+	include?: "notes" | "files";
+	/** Cap the number of slices, rolling the remainder into one "Other" slice.
+	 * Default 12; 0 shows every folder. */
+	maxSlices?: number;
+	/** Slice order. Default "count" (largest first); "name" is alphabetical. */
+	sort?: "count" | "name";
+	/** Custom bar colour (hex). Undefined uses the theme accent. */
+	color?: string;
 }
 
 /** The built-in vault statistics a "stats" card can show. */
@@ -1419,6 +1439,8 @@ export interface DashboardCard {
 	heatmap?: HeatmapConfig;
 	/** kind === "trend": metric, range and line options for the activity graph. */
 	trend?: TrendConfig;
+	/** kind === "folderchart": which subtrees, bar style and slice options. */
+	folderChart?: FolderChartConfig;
 	/** kind === "stats": which stats to show, attachment breakdown and custom
 	 * query counts (all gated behind the config's `advanced` flag). */
 	stats?: StatsConfig;

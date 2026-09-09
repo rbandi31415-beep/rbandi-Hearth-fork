@@ -7609,6 +7609,172 @@ body.hearth-dv-resizing {
 	transform: translateX(-100%);
 }
 
+/* ---- Folder distribution card ------------------------------------- */
+.hearth-folderchart {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-width: 0;
+	gap: 6px;
+}
+
+.hearth-folderchart-crumbs {
+	flex: 0 0 auto;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 3px;
+	font-size: 0.75rem;
+	color: var(--text-muted);
+}
+
+.hearth-folderchart-crumb.is-link {
+	cursor: pointer;
+	color: var(--text-accent);
+}
+
+.hearth-folderchart-crumb.is-link:hover {
+	text-decoration: underline;
+}
+
+.hearth-folderchart-sep {
+	color: var(--text-faint);
+}
+
+.hearth-folderchart-plot {
+	flex: 1 1 auto;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	overflow: auto;
+}
+
+/* Horizontal bars */
+.hearth-folderchart-bars {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.hearth-folderchart-bar-row {
+	display: grid;
+	grid-template-columns: minmax(0, 8rem) 1fr auto;
+	align-items: center;
+	gap: 8px;
+}
+
+.hearth-folderchart-bar-row.is-drillable {
+	cursor: pointer;
+}
+
+.hearth-folderchart-bar-row.is-drillable:hover .hearth-folderchart-bar-label {
+	color: var(--text-accent);
+}
+
+.hearth-folderchart-bar-label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 0.8rem;
+	color: var(--text-normal);
+}
+
+.hearth-folderchart-bar-track {
+	position: relative;
+	height: 12px;
+	border-radius: 4px;
+	background: var(--background-modifier-border);
+	overflow: hidden;
+}
+
+.hearth-folderchart-bar-fill {
+	height: 100%;
+	border-radius: 4px;
+	min-width: 2px;
+}
+
+.hearth-folderchart-bar-value {
+	font-size: 0.75rem;
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+}
+
+/* Radial ("circular barplot") */
+.hearth-folderchart-radial {
+	flex: 1 1 auto;
+	min-height: 120px;
+	display: flex;
+	justify-content: center;
+}
+
+.hearth-folderchart-svg {
+	max-height: 100%;
+	max-width: 100%;
+	height: auto;
+	aspect-ratio: 1 / 1;
+}
+
+.hearth-folderchart-track {
+	fill: var(--background-modifier-border);
+	opacity: 0.4;
+}
+
+.hearth-folderchart-wedge {
+	stroke: var(--background-primary);
+	stroke-width: 1;
+}
+
+.hearth-folderchart-wedge.is-drillable {
+	cursor: pointer;
+}
+
+.hearth-folderchart-wedge.is-drillable:hover {
+	stroke: var(--text-accent);
+	stroke-width: 1.5;
+}
+
+.hearth-folderchart-total {
+	fill: var(--text-muted);
+	font-size: 18px;
+	font-variant-numeric: tabular-nums;
+}
+
+.hearth-folderchart-legend {
+	flex: 0 0 auto;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 12px;
+}
+
+.hearth-folderchart-legend-entry {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	font-size: 0.75rem;
+	color: var(--text-muted);
+}
+
+.hearth-folderchart-legend-entry.is-drillable {
+	cursor: pointer;
+}
+
+.hearth-folderchart-legend-entry.is-drillable:hover {
+	color: var(--text-accent);
+}
+
+.hearth-folderchart-legend-swatch {
+	width: 10px;
+	height: 10px;
+	border-radius: 3px;
+	flex: 0 0 auto;
+}
+
+.hearth-folderchart-legend-value {
+	font-variant-numeric: tabular-nums;
+	color: var(--text-faint);
+}
+
 /* ---- Web card: external-open button & framing fallback -------------- */
 .hearth-card-body.hearth-web-body {
 	position: relative;
