@@ -1,1 +1,0 @@
-- [Hearth vault deploy path](hearth-vault-deploy-path.md) — where to copy build output for the user's live Obsidian vault
