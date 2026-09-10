@@ -40,7 +40,7 @@ import { type CardDefinition, type CardEditorContext } from "./definition";
 // threshold rules live in ../routine.ts.
 
 const DEFAULT_DAYS = 30;
-const MIN_DAYS = 7;
+const MIN_DAYS = 1;
 const MAX_DAYS = 120;
 const DEFAULT_FILE = "Meta/Routine Log.csv";
 
