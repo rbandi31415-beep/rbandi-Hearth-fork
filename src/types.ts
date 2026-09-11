@@ -1558,6 +1558,16 @@ export interface DashboardCard {
 	 * free-form and may overlap. */
 	tileAutoFlow?: boolean;
 
+	/** kind === "commands": how tiles are sized and positioned.
+	 * "freeform" (default, or omitted) is the drag/resize/free-position grid
+	 * driven by `tileSize`/`tileAutoFlow` and each tile's own size/col/row.
+	 * "even" ignores all of that per-tile placement data (kept on disk, but
+	 * unused while this mode is active) and instead splits the card into a
+	 * roughly-square grid where every tile in a row shares that row's height
+	 * and width equally, scaling with the card's size — e.g. 4 tiles become
+	 * a 2×2 grid of quadrants. */
+	tileLayout?: "freeform" | "even";
+
 	/** Show a button that opens the card's file in the editor.
 	 *
 	 * The two cards that offer it default differently, because one of them

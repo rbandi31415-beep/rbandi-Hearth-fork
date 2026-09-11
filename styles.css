@@ -2837,6 +2837,41 @@
 	grid-row: var(--hearth-tile-row, auto) / span var(--hearth-tile-rs, 1);
 }
 
+/* "Even grid" layout mode (Commands card): every tile fills an equal share
+ * of the card instead of having its own size/position. Tiles are grouped
+ * into rows of `ceil(sqrt(n))` (see renderCommandsEven in commands.ts); each
+ * row gets equal height, and each tile within a row gets equal width — so a
+ * short last row (e.g. tile 3 of 3) simply gets wider tiles rather than
+ * leaving a gap. `height: 100%` makes the whole layout scale with the card,
+ * per the original spacing (12px/14px body padding, 6px gaps) rather than
+ * introducing new spacing rules. */
+.hearth-tiles-even {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	height: 100%;
+	min-height: 0;
+}
+
+.hearth-tile-grid-row {
+	display: flex;
+	gap: 6px;
+	flex: 1 1 0;
+	min-height: 0;
+}
+
+.hearth-tiles-even .hearth-link-tile {
+	flex: 1 1 0;
+	min-width: 0;
+	min-height: 0;
+}
+
+/* Even-grid tiles have no drag/resize behaviour, so arrange mode shouldn't
+ * suggest they're grabbable the way free-form tiles are. */
+.hearth-grid.is-arranging .hearth-tiles-even .hearth-link-tile {
+	cursor: default;
+}
+
 /* Fixed icon size: the icon does NOT scale with tile height. Icons stay a
  * constant, readable size regardless of tile dimensions. */
 .hearth-link-icon {

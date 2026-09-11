@@ -1896,6 +1896,14 @@ export const en = {
 			addLink: "Add link",
 		},
 		commands: {
+			layout: "Layout",
+			layoutDesc:
+				"Free-form: drag, resize, and position each tile yourself. Even grid: " +
+				"tiles auto-size to fill the card in equal rows and columns (e.g. 4 " +
+				"tiles become a 2×2 grid of quadrants) — sizing and dragging are " +
+				"turned off, and use the move-up/down buttons below to reorder.",
+			layoutFreeform: "Free-form",
+			layoutEven: "Even grid",
 			autoShift: "Auto-shift tiles (beta)",
 			autoShiftDesc:
 				"When on, tiles shove each other aside as one is dragged (like phone " +
