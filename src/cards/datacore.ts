@@ -1,5 +1,6 @@
 import { Component, setIcon, Setting } from "obsidian";
 import { emptyState, wireMarkdownLinks } from "../cardbodies";
+import { addNumberField } from "../editors";
 import {
 	DATACORE_PLUGIN_ID,
 	datacoreQueryError,
@@ -176,15 +177,18 @@ export function datacoreEditor(ctx: CardEditorContext, containerEl: HTMLElement)
 	const paging = new Setting(containerEl)
 		.setName(t().editors.datacore.pageSize)
 		.setDesc(t().editors.datacore.pageSizeDesc);
-	paging.addSlider((s) => {
-		s.setLimits(0, 100, 5)
-			.setValue(cfg.pageSize ?? 0)
-			.setDynamicTooltip()
-			.onChange((v) => {
-				cfg.pageSize = v > 0 ? v : undefined;
-				ctx.opts.save();
-				ctx.opts.rerender();
-			});
+	addNumberField(ctx, paging, {
+		value: cfg.pageSize ?? 0,
+		min: 0,
+		max: 100,
+		default: 0,
+		rerender: true,
+		set: (n) => {
+			cfg.pageSize = n > 0 ? n : undefined;
+		},
+		clear: () => {
+			cfg.pageSize = undefined;
+		},
 	});
 }
 

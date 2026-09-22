@@ -2837,6 +2837,41 @@
 	grid-row: var(--hearth-tile-row, auto) / span var(--hearth-tile-rs, 1);
 }
 
+/* "Even grid" layout mode (Commands card): every tile fills an equal share
+ * of the card instead of having its own size/position. Tiles are grouped
+ * into rows of `ceil(sqrt(n))` (see renderCommandsEven in commands.ts); each
+ * row gets equal height, and each tile within a row gets equal width — so a
+ * short last row (e.g. tile 3 of 3) simply gets wider tiles rather than
+ * leaving a gap. `height: 100%` makes the whole layout scale with the card,
+ * per the original spacing (12px/14px body padding, 6px gaps) rather than
+ * introducing new spacing rules. */
+.hearth-tiles-even {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	height: 100%;
+	min-height: 0;
+}
+
+.hearth-tile-grid-row {
+	display: flex;
+	gap: 6px;
+	flex: 1 1 0;
+	min-height: 0;
+}
+
+.hearth-tiles-even .hearth-link-tile {
+	flex: 1 1 0;
+	min-width: 0;
+	min-height: 0;
+}
+
+/* Even-grid tiles have no drag/resize behaviour, so arrange mode shouldn't
+ * suggest they're grabbable the way free-form tiles are. */
+.hearth-grid.is-arranging .hearth-tiles-even .hearth-link-tile {
+	cursor: default;
+}
+
 /* Fixed icon size: the icon does NOT scale with tile height. Icons stay a
  * constant, readable size regardless of tile dimensions. */
 .hearth-link-icon {
@@ -7384,6 +7419,18 @@ body.hearth-dv-resizing {
 	background: transparent;
 }
 
+/* Days after today, shown when the card extends into the future (e.g. the
+   "tasks scheduled" metric). Shaded like any other day but outlined so the
+   past/future split reads at a glance. */
+.hearth-heatmap-cell.is-future {
+	outline: 1px dashed var(--background-modifier-border);
+	outline-offset: -1px;
+}
+
+.hearth-heatmap-cell.is-today {
+	box-shadow: 0 0 0 1.5px var(--text-accent);
+}
+
 .hearth-heatmap-cell.is-split {
 	display: flex;
 	gap: 1px;
@@ -7607,6 +7654,298 @@ body.hearth-dv-resizing {
 
 .hearth-trend-xtick.is-last {
 	transform: translateX(-100%);
+}
+
+/* ---- Folder distribution card ------------------------------------- */
+.hearth-folderchart {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-width: 0;
+	gap: 6px;
+}
+
+.hearth-folderchart-crumbs {
+	flex: 0 0 auto;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 3px;
+	font-size: 0.75rem;
+	color: var(--text-muted);
+}
+
+.hearth-folderchart-crumb.is-link {
+	cursor: pointer;
+	color: var(--text-accent);
+}
+
+.hearth-folderchart-crumb.is-link:hover {
+	text-decoration: underline;
+}
+
+.hearth-folderchart-sep {
+	color: var(--text-faint);
+}
+
+.hearth-folderchart-plot {
+	flex: 1 1 auto;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	overflow: auto;
+}
+
+/* Horizontal bars */
+.hearth-folderchart-bars {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.hearth-folderchart-bar-row {
+	display: grid;
+	grid-template-columns: minmax(0, 8rem) 1fr auto;
+	align-items: center;
+	gap: 8px;
+}
+
+.hearth-folderchart-bar-row.is-drillable {
+	cursor: pointer;
+}
+
+.hearth-folderchart-bar-row.is-drillable:hover .hearth-folderchart-bar-label {
+	color: var(--text-accent);
+}
+
+.hearth-folderchart-bar-label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 0.8rem;
+	color: var(--text-normal);
+}
+
+.hearth-folderchart-bar-track {
+	position: relative;
+	height: 12px;
+	border-radius: 4px;
+	background: var(--background-modifier-border);
+	overflow: hidden;
+}
+
+.hearth-folderchart-bar-fill {
+	height: 100%;
+	border-radius: 4px;
+	min-width: 2px;
+}
+
+.hearth-folderchart-bar-value {
+	font-size: 0.75rem;
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+}
+
+/* Radial ("circular barplot") */
+.hearth-folderchart-radial {
+	flex: 1 1 auto;
+	min-height: 120px;
+	display: flex;
+	justify-content: center;
+}
+
+.hearth-folderchart-svg {
+	max-height: 100%;
+	max-width: 100%;
+	height: auto;
+	aspect-ratio: 1 / 1;
+}
+
+.hearth-folderchart-track {
+	fill: var(--background-modifier-border);
+	opacity: 0.4;
+}
+
+.hearth-folderchart-wedge {
+	stroke: var(--background-primary);
+	stroke-width: 1;
+}
+
+.hearth-folderchart-wedge.is-drillable {
+	cursor: pointer;
+}
+
+.hearth-folderchart-wedge.is-drillable:hover {
+	stroke: var(--text-accent);
+	stroke-width: 1.5;
+}
+
+.hearth-folderchart-total {
+	fill: var(--text-muted);
+	font-size: 18px;
+	font-variant-numeric: tabular-nums;
+}
+
+/* Pie */
+.hearth-folderchart-pie {
+	flex: 1 1 auto;
+	min-height: 120px;
+	display: flex;
+	justify-content: center;
+}
+
+.hearth-folderchart-slice {
+	stroke: var(--background-primary);
+	stroke-width: 1.5;
+}
+
+.hearth-folderchart-slice.is-drillable {
+	cursor: pointer;
+}
+
+.hearth-folderchart-slice.is-drillable:hover {
+	stroke: var(--text-accent);
+	stroke-width: 2;
+}
+
+.hearth-folderchart-slice-label {
+	fill: var(--text-on-accent, #fff);
+	font-size: 8px;
+	pointer-events: none;
+	paint-order: stroke;
+	stroke: rgba(0, 0, 0, 0.35);
+	stroke-width: 2px;
+}
+
+/* Sunburst (nested pie) */
+.hearth-folderchart-sunburst {
+	flex: 1 1 auto;
+	min-height: 140px;
+	display: flex;
+	justify-content: center;
+}
+
+.hearth-folderchart-arc {
+	stroke: var(--background-primary);
+	stroke-width: 1;
+}
+
+.hearth-folderchart-arc.is-drillable {
+	cursor: pointer;
+}
+
+.hearth-folderchart-arc.is-drillable:hover {
+	stroke: var(--text-accent);
+	stroke-width: 1.75;
+}
+
+.hearth-folderchart-arc-label {
+	fill: var(--text-on-accent, #fff);
+	font-size: 7.5px;
+	pointer-events: none;
+	paint-order: stroke;
+	stroke: rgba(0, 0, 0, 0.4);
+	stroke-width: 2px;
+}
+
+.hearth-folderchart-legend {
+	flex: 0 0 auto;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 12px;
+}
+
+.hearth-folderchart-legend-entry {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	font-size: 0.75rem;
+	color: var(--text-muted);
+}
+
+.hearth-folderchart-legend-entry.is-drillable {
+	cursor: pointer;
+}
+
+.hearth-folderchart-legend-entry.is-drillable:hover {
+	color: var(--text-accent);
+}
+
+.hearth-folderchart-legend-swatch {
+	width: 10px;
+	height: 10px;
+	border-radius: 3px;
+	flex: 0 0 auto;
+}
+
+.hearth-folderchart-legend-value {
+	font-variant-numeric: tabular-nums;
+	color: var(--text-faint);
+}
+
+/* ---- New notes card ---------------------------------------------- */
+.hearth-newnotes {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	height: 100%;
+	min-width: 0;
+}
+
+.hearth-newnotes-headline {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.hearth-newnotes-count {
+	font-size: 2rem;
+	font-weight: 600;
+	line-height: 1.1;
+	color: var(--text-normal);
+	font-variant-numeric: tabular-nums;
+}
+
+.hearth-newnotes-delta {
+	font-size: 0.8rem;
+	font-variant-numeric: tabular-nums;
+	color: var(--text-muted);
+}
+
+.hearth-newnotes-delta.is-up {
+	color: var(--color-green, var(--text-success));
+}
+
+.hearth-newnotes-delta.is-down {
+	color: var(--color-red, var(--text-error));
+}
+
+.hearth-newnotes-sub {
+	font-size: 0.75rem;
+	color: var(--text-muted);
+}
+
+.hearth-newnotes-spark {
+	width: 100%;
+	height: 24px;
+	margin-top: 2px;
+	flex: 0 0 auto;
+}
+
+.hearth-newnotes-spark polyline {
+	fill: none;
+	stroke: var(--text-accent);
+	stroke-width: 1.5;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.hearth-newnotes-list {
+	margin-top: 4px;
+	overflow-y: auto;
+	min-height: 0;
 }
 
 /* ---- Web card: external-open button & framing fallback -------------- */

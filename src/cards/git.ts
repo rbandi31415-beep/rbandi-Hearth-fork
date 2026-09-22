@@ -1,6 +1,6 @@
 import { Component, Menu, Notice, setIcon, Setting, TFile } from "obsidian";
 import { emptyState, moment } from "../cardbodies";
-import { addResetButton, moveItem } from "../editors";
+import { addNumberField, moveItem } from "../editors";
 import {
 	GIT_ACTION_DEFS,
 	GIT_PLUGIN_ID,
@@ -658,19 +658,18 @@ export function gitEditor(ctx: CardEditorContext, containerEl: HTMLElement): voi
 	const changeLimit = new Setting(containerEl)
 		.setName(strings.changeLimit)
 		.setDesc(strings.changeLimitDesc);
-	changeLimit.addSlider((s) =>
-		s
-			.setLimits(0, 50, 1)
-			.setValue(cfg.changeLimit ?? 8)
-			.setDynamicTooltip()
-			.onChange((value) => {
-				cfg.changeLimit = value === 8 ? undefined : value;
-				ctx.opts.save();
-				ctx.opts.rerender();
-			}),
-	);
-	addResetButton(ctx, changeLimit, t().settings.resetSlider, () => {
-		cfg.changeLimit = undefined;
+	addNumberField(ctx, changeLimit, {
+		value: cfg.changeLimit ?? 8,
+		min: 0,
+		max: 50,
+		default: 8,
+		rerender: true,
+		set: (n) => {
+			cfg.changeLimit = n === 8 ? undefined : n;
+		},
+		clear: () => {
+			cfg.changeLimit = undefined;
+		},
 	});
 
 	new Setting(containerEl)
@@ -688,38 +687,36 @@ export function gitEditor(ctx: CardEditorContext, containerEl: HTMLElement): voi
 		const logLimit = new Setting(containerEl)
 			.setName(strings.logLimit)
 			.setDesc(strings.logLimitDesc);
-		logLimit.addSlider((s) =>
-			s
-				.setLimits(1, 25, 1)
-				.setValue(cfg.logLimit ?? 5)
-				.setDynamicTooltip()
-				.onChange((value) => {
-					cfg.logLimit = value === 5 ? undefined : value;
-					ctx.opts.save();
-					ctx.opts.rerender();
-				}),
-		);
-		addResetButton(ctx, logLimit, t().settings.resetSlider, () => {
-			cfg.logLimit = undefined;
+		addNumberField(ctx, logLimit, {
+			value: cfg.logLimit ?? 5,
+			min: 1,
+			max: 25,
+			default: 5,
+			rerender: true,
+			set: (n) => {
+				cfg.logLimit = n === 5 ? undefined : n;
+			},
+			clear: () => {
+				cfg.logLimit = undefined;
+			},
 		});
 	}
 
 	const refresh = new Setting(containerEl)
 		.setName(strings.refresh)
 		.setDesc(strings.refreshDesc);
-	refresh.addSlider((s) =>
-		s
-			.setLimits(0, 60, 5)
-			.setValue(cfg.refreshMin ?? 0)
-			.setDynamicTooltip()
-			.onChange((value) => {
-				cfg.refreshMin = value > 0 ? value : undefined;
-				ctx.opts.save();
-				ctx.opts.rerender();
-			}),
-	);
-	addResetButton(ctx, refresh, t().settings.resetSlider, () => {
-		cfg.refreshMin = undefined;
+	addNumberField(ctx, refresh, {
+		value: cfg.refreshMin ?? 0,
+		min: 0,
+		max: 60,
+		default: 0,
+		rerender: true,
+		set: (n) => {
+			cfg.refreshMin = n > 0 ? n : undefined;
+		},
+		clear: () => {
+			cfg.refreshMin = undefined;
+		},
 	});
 }
 

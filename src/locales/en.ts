@@ -1273,6 +1273,8 @@ export const en = {
 			searchbar: "Search bar",
 			heatmap: "Activity heatmap",
 			trend: "Activity trend",
+			folderchart: "Folder distribution",
+			newnotes: "New notes",
 			calculator: "Calculator",
 			dataview: "Dataview query",
 			datacore: "Datacore query",
@@ -1725,6 +1727,9 @@ export const en = {
 			colorDesc: "The color the heatmap is shaded in. Defaults to your theme's accent color.",
 			weeks: "Weeks",
 			weeksDesc: "How many weeks of history to show.",
+			futureWeeks: "Future weeks",
+			futureWeeksDesc:
+				"How many weeks past this one to also show — useful for the “tasks scheduled” metric. A plain scheduled-tasks card shows four by default.",
 			combinedMetrics: "Metrics to combine",
 			metricColors: "Colors",
 			combinedStyle: "Display",
@@ -1755,6 +1760,52 @@ export const en = {
 			groupDay: "Day",
 			groupWeek: "Week",
 		},
+		folderchart: {
+			roots: "Folders to chart",
+			rootsDesc:
+				"One or more subtrees. Leave empty to chart the whole vault. Several folders show one bar each until you drill in.",
+			addRoot: "Add folder",
+			style: "Style",
+			styleRadial: "Radial bars",
+			styleBars: "Horizontal bars",
+			stylePie: "Pie",
+			styleSunburst: "Sunburst (nested)",
+			include: "Count",
+			includeNotes: "Notes only",
+			includeFiles: "All files",
+			sort: "Order",
+			sortCount: "Largest first",
+			sortName: "By name",
+			maxSlices: "Max slices",
+			maxSlicesDesc:
+				"Roll the smallest folders past this many into one “Other” slice. 0 shows every folder.",
+			color: "Color",
+			colorDesc:
+				"Bar color. Defaults to the theme accent; each bar's shade follows its share of the largest.",
+		},
+		newnotes: {
+			scope: "Count notes by",
+			scopeTag: "Tag",
+			scopeFolder: "Folder",
+			scopeProperty: "Property",
+			tag: "Tag",
+			tagDesc: "Notes carrying this tag (with or without #). Subtags count too.",
+			tagPlaceholder: "#person",
+			propertyKeyPlaceholder: "type",
+			folder: "Folder",
+			folderDesc: "Notes anywhere under this folder. Empty means the whole vault.",
+			folderPlaceholder: "People/Persons",
+			pickFolder: "Pick folder",
+			propertyKey: "Property",
+			propertyKeyDesc: "Notes whose frontmatter has this key.",
+			propertyValue: "Value",
+			propertyValueDesc: "Optional. Leave empty to match any note that has the key.",
+			propertyValuePlaceholder: "person",
+			days: "Window (days)",
+			daysDesc: "Count notes created within this many days, compared with the same span before it.",
+			showSparkline: "Show sparkline",
+			showList: "List the notes",
+		},
 		stats: {
 			advanced: "Advanced",
 			advancedDesc:
@@ -1775,12 +1826,15 @@ export const en = {
 			queryPlaceholder: "#project or status:active",
 			addCount: "Add count",
 			removeCount: "Remove count",
+			staleDays: "Stale after (days)",
+			staleDaysDesc: "How long since a note's last edit before it counts toward the Stale notes tile.",
 		},
 		metricOptions: {
 			modified: "Notes edited",
 			created: "Notes created",
 			commits: "Commits",
 			tasksCompleted: "Tasks completed",
+			tasksScheduled: "Tasks scheduled",
 			combined: "Combined",
 		},
 		savedSearch: {
@@ -1842,6 +1896,14 @@ export const en = {
 			addLink: "Add link",
 		},
 		commands: {
+			layout: "Layout",
+			layoutDesc:
+				"Free-form: drag, resize, and position each tile yourself. Even grid: " +
+				"tiles auto-size to fill the card in equal rows and columns (e.g. 4 " +
+				"tiles become a 2×2 grid of quadrants) — sizing and dragging are " +
+				"turned off, and use the move-up/down buttons below to reorder.",
+			layoutFreeform: "Free-form",
+			layoutEven: "Even grid",
 			autoShift: "Auto-shift tiles (beta)",
 			autoShiftDesc:
 				"When on, tiles shove each other aside as one is dragged (like phone " +
@@ -2766,6 +2828,19 @@ export const en = {
 			weekOf: (date: string) => `Week of ${date}`,
 			runningTotal: "running total",
 		},
+		folderchart: {
+			vault: "Vault",
+			allRoots: "All folders",
+			here: "(here)",
+			other: "Other",
+			empty: "No notes in this folder yet",
+		},
+		newnotes: {
+			unset: "Pick a tag, folder or property in this card's settings",
+			inLastDays: (days: number) => `in the last ${days} ${days === 1 ? "day" : "days"}`,
+			vsPrevious: (days: number, previous: number) =>
+				`${previous} in the previous ${days} ${days === 1 ? "day" : "days"}`,
+		},
 		recent: {
 			unprocessed: "Unprocessed fleeting note",
 			missingProcessed: "Fleeting note has no \"processed\" property",
@@ -2846,6 +2921,11 @@ export const en = {
 			tasksOverdue: "Tasks overdue",
 			tasksPlanned: "Tasks planned",
 			hoursPlanned: "Hours planned",
+			orphans: "Orphans",
+			brokenLinks: "Broken links",
+			totalLinks: "Links",
+			staleNotes: "Stale notes",
+			vaultSize: "Vault size",
 		},
 		web: {
 			openInBrowser: "Open in browser",
@@ -3071,6 +3151,8 @@ export const en = {
 		searchbar: "Search bar",
 		heatmap: "Activity heatmap",
 		trend: "Activity trend",
+		folderchart: "Folder distribution",
+		newnotes: "New notes",
 		text: "Text / jot-down",
 		calculator: "Calculator",
 		dataview: "Dataview query",
@@ -3114,6 +3196,8 @@ export const en = {
 		searchbar: "A search field on the board, framed or bare",
 		heatmap: "A year of vault activity, day by day",
 		trend: "One activity metric plotted as a line over time",
+		folderchart: "Notes per folder, as a circular or bar chart you can drill into",
+		newnotes: "How many notes with a tag, folder or property you added lately",
 		text: "A scratchpad that lives on the dashboard",
 		calculator: "Sums, unit conversion and exchange rates",
 		dataview: "A DQL or DataviewJS query, rendered by Dataview",

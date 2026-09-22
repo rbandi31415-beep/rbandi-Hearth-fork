@@ -1,7 +1,7 @@
 import { activityByDay, moment, type Moment } from "../cardbodies";
 import { commitsByDay } from "../git";
 import { t } from "../i18n";
-import { tasksCompletedByDay } from "../tasknotes";
+import { tasksCompletedByDay, tasksScheduledByDay } from "../tasknotes";
 import { type HeatmapMetric } from "../types";
 import { type HomeView } from "../view";
 
@@ -16,7 +16,13 @@ export type Rgb = [number, number, number];
 
 /** Every combinable metric, in a fixed order so pickers and the heatmap's
  * split-cell stripe order never shuffle around as things are toggled. */
-export const ALL_ACTIVITY_METRICS: HeatmapMetric[] = ["modified", "created", "commits", "tasksCompleted"];
+export const ALL_ACTIVITY_METRICS: HeatmapMetric[] = [
+	"modified",
+	"created",
+	"commits",
+	"tasksCompleted",
+	"tasksScheduled",
+];
 
 /** The default hue for a metric that isn't "modified" and has no custom
  * colour set — chosen distinct enough from each other to read apart when
@@ -26,6 +32,7 @@ export const DEFAULT_METRIC_HUE: Record<Exclude<HeatmapMetric, "modified">, numb
 	created: 150,
 	commits: 265,
 	tasksCompleted: 35,
+	tasksScheduled: 200,
 };
 
 /** Standard HSL → sRGB conversion (h in degrees, s/l in percent). */
@@ -38,15 +45,38 @@ export function hslToRgb(h: number, s: number, l: number): Rgb {
 	return [Math.round(255 * f(0)), Math.round(255 * f(8)), Math.round(255 * f(4))];
 }
 
-/** The theme's current accent colour, read once per render from an element's
- * computed style (falls back to Obsidian's default violet-blue if the custom
- * properties aren't set for some reason). */
-export function accentRgb(el: HTMLElement): Rgb {
+/** The theme's current accent colour as HSL (h in degrees, s/l in percent),
+ * read from an element's computed style. Falls back to Obsidian's default
+ * violet-blue if the custom properties aren't set. */
+export function accentHsl(el: HTMLElement): [number, number, number] {
 	const style = getComputedStyle(el);
 	const h = parseFloat(style.getPropertyValue("--accent-h"));
 	const s = parseFloat(style.getPropertyValue("--accent-s"));
 	const l = parseFloat(style.getPropertyValue("--accent-l"));
-	return hslToRgb(Number.isFinite(h) ? h : 266, Number.isFinite(s) ? s : 84, Number.isFinite(l) ? l : 62);
+	return [
+		Number.isFinite(h) ? h : 266,
+		Number.isFinite(s) ? s : 84,
+		Number.isFinite(l) ? l : 62,
+	];
+}
+
+/** The theme's current accent colour, read once per render from an element's
+ * computed style. */
+export function accentRgb(el: HTMLElement): Rgb {
+	return hslToRgb(...accentHsl(el));
+}
+
+/**
+ * `n` hues (degrees) for a categorical chart, spaced evenly around the wheel
+ * from the theme accent hue — so the palette follows the theme and the first
+ * colour is always the familiar accent. Meant for a small `n` (cap it at ~8
+ * and fold the rest into a neutral slice); past that the hues stop reading
+ * apart.
+ */
+export function categoricalHues(el: HTMLElement, n: number): number[] {
+	const [baseH] = accentHsl(el);
+	const count = Math.max(1, n);
+	return Array.from({ length: count }, (_, i) => (baseH + (i * 360) / count) % 360);
 }
 
 /** "#rrggbb" (or "#rgb") → RGB. Malformed input falls back to mid-grey rather
@@ -104,6 +134,8 @@ export function metricWord(metric: HeatmapMetric): string {
 			return t().editors.metricOptions.commits;
 		case "tasksCompleted":
 			return t().editors.metricOptions.tasksCompleted;
+		case "tasksScheduled":
+			return t().editors.metricOptions.tasksScheduled;
 	}
 }
 
@@ -119,6 +151,8 @@ export async function metricByDay(view: HomeView, metric: HeatmapMetric): Promis
 			return commitsByDay(view.app);
 		case "tasksCompleted":
 			return tasksCompletedByDay(view.app);
+		case "tasksScheduled":
+			return tasksScheduledByDay(view.app);
 	}
 }
 

@@ -411,6 +411,82 @@ export function addResetButton(ctx: CardEditorContext,
 }
 
 
+/**
+ * A whole-number text field with the same ergonomics as an `addSlider` + reset
+ * pair — for values you want to type exactly rather than drag to. `set`
+ * receives the clamped integer on every valid edit; `clear` restores the
+ * default (the reset button, and clearing the field then blurring). The field
+ * re-normalises its displayed value on blur, so an out-of-range or non-integer
+ * entry is corrected in place.
+ */
+export function addNumberField(
+	ctx: CardEditorContext,
+	setting: Setting,
+	opts: {
+		value: number;
+		min: number;
+		max: number;
+		default: number;
+		placeholder?: string;
+		set: (n: number) => void;
+		clear: () => void;
+		/** Also redraw the card on every change (a live preview), the way a few
+		 * sliders do. Off by default — most number fields apply on modal close. */
+		rerender?: boolean;
+	},
+): void {
+	const clamp = (n: number): number => Math.max(opts.min, Math.min(opts.max, Math.round(n)));
+	const applied = (): void => {
+		ctx.opts.save();
+		if (opts.rerender) ctx.opts.rerender();
+	};
+
+	setting.addText((txt) => {
+		txt.setValue(String(opts.value));
+		if (opts.placeholder) txt.setPlaceholder(opts.placeholder);
+		txt.onChange((raw) => {
+			const trimmed = raw.trim();
+			if (trimmed === "") return; // settled on blur
+			const n = Number(trimmed);
+			if (!Number.isFinite(n)) return;
+			opts.set(clamp(n));
+			applied();
+		});
+
+		const input = txt.inputEl;
+		input.type = "number";
+		input.inputMode = "numeric";
+		input.min = String(opts.min);
+		input.max = String(opts.max);
+		input.addClass("hearth-count-input");
+		input.addEventListener("blur", () => {
+			const trimmed = input.value.trim();
+			if (trimmed === "") {
+				opts.clear();
+				applied();
+				ctx.requestRender();
+				return;
+			}
+			const n = clamp(Number(trimmed) || opts.default);
+			input.value = String(n);
+			opts.set(n);
+			applied();
+		});
+	});
+
+	setting.addExtraButton((b) =>
+		b
+			.setIcon("rotate-ccw")
+			.setTooltip(t().settings.resetSlider)
+			.onClick(() => {
+				opts.clear();
+				applied();
+				ctx.requestRender();
+			}),
+	);
+}
+
+
 /** Move an item within a list, then persist and re-render the editor. */
 export function moveItem<T>(ctx: CardEditorContext, arr: T[], from: number, to: number): void {
 	if (to < 0 || to >= arr.length) return;

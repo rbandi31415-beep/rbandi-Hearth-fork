@@ -19,6 +19,11 @@ export function renderCommands(view: HomeView, card: DashboardCard, body: HTMLEl
 		return;
 	}
 
+	if (card.tileLayout === "even") {
+		renderCommandsEven(view, commands, body);
+		return;
+	}
+
 	const grid = body.createDiv("hearth-links hearth-tiles-sized");
 	const baseTile = card.tileSize && card.tileSize > 0 ? card.tileSize : 90;
 	grid.style.setProperty("--hearth-tile", `${baseTile}px`);
@@ -56,6 +61,32 @@ export function renderCommands(view: HomeView, card: DashboardCard, body: HTMLEl
 }
 
 
+/** "Even grid" layout: every tile fills an equal share of the card, split
+ * into a roughly-square grid (e.g. 3 tiles → a 2-wide row plus one full-width
+ * tile below, 4 tiles → a 2×2 grid of quadrants). Each tile's own
+ * size/col/row is ignored here — only its icon, label, and click action are
+ * used — so switching back to free-form restores the old per-tile layout
+ * untouched. */
+function renderCommandsEven(view: HomeView, commands: CommandItem[], body: HTMLElement): void {
+	const wrap = body.createDiv("hearth-links hearth-tiles-even");
+	const cols = Math.max(1, Math.ceil(Math.sqrt(commands.length)));
+	for (let i = 0; i < commands.length; i += cols) {
+		const rowItems = commands.slice(i, i + cols);
+		const row = wrap.createDiv("hearth-tile-grid-row");
+		for (const cmd of rowItems) {
+			const tile = row.createDiv("hearth-link-tile");
+			applyTileVisual(view, tile, cmd.icon, "terminal-square");
+			tile.createDiv({ cls: "hearth-link-label", text: cmd.name || cmd.id });
+			if (!view.arrangeMode) {
+				const run = () => runCommand(view, cmd);
+				tile.addEventListener("click", run);
+				makeClickable(tile, run, cmd.name || cmd.id);
+			}
+		}
+	}
+}
+
+
 function runCommand(view: HomeView, cmd: CommandItem): void {
 	if (cmd.id) view.app.commands.executeCommandById(cmd.id);
 }
@@ -64,36 +95,51 @@ function runCommand(view: HomeView, cmd: CommandItem): void {
 export function commandsEditor(ctx: CardEditorContext, containerEl: HTMLElement): void {
 	const card = ctx.card;
 	new Setting(containerEl)
-		.setName(t().editors.commands.autoShift)
-		.setDesc(t().editors.commands.autoShiftDesc)
-		.addToggle((t) =>
-			t.setValue(card.tileAutoFlow ?? false).onChange((v) => {
-				card.tileAutoFlow = v;
-				ctx.opts.save();
-			}),
-		);
-	const buttonSize = new Setting(containerEl)
-		.setName(t().editors.commands.buttonSize)
-		.setDesc(t().editors.commands.buttonSizeDesc);
-	buttonSize.addSlider((s) => {
-		s.setLimits(60, 180, 10)
-			.setValue(card.tileSize ?? 90)
-			.setDynamicTooltip()
-			.onChange((v) => {
-				card.tileSize = v === 90 ? undefined : v;
-				ctx.opts.save();
-			});
-	});
-	buttonSize.addExtraButton((b) =>
-		b
-			.setIcon("rotate-ccw")
-			.setTooltip(t().settings.resetSlider)
-			.onClick(() => {
-				card.tileSize = undefined;
+		.setName(t().editors.commands.layout)
+		.setDesc(t().editors.commands.layoutDesc)
+		.addDropdown((d) => {
+			d.addOption("freeform", t().editors.commands.layoutFreeform);
+			d.addOption("even", t().editors.commands.layoutEven);
+			d.setValue(card.tileLayout === "even" ? "even" : "freeform").onChange((v) => {
+				card.tileLayout = v === "even" ? "even" : undefined;
 				ctx.opts.save();
 				ctx.requestRender();
-			}),
-	);
+			});
+		});
+
+	if (card.tileLayout !== "even") {
+		new Setting(containerEl)
+			.setName(t().editors.commands.autoShift)
+			.setDesc(t().editors.commands.autoShiftDesc)
+			.addToggle((t) =>
+				t.setValue(card.tileAutoFlow ?? false).onChange((v) => {
+					card.tileAutoFlow = v;
+					ctx.opts.save();
+				}),
+			);
+		const buttonSize = new Setting(containerEl)
+			.setName(t().editors.commands.buttonSize)
+			.setDesc(t().editors.commands.buttonSizeDesc);
+		buttonSize.addSlider((s) => {
+			s.setLimits(60, 180, 10)
+				.setValue(card.tileSize ?? 90)
+				.setDynamicTooltip()
+				.onChange((v) => {
+					card.tileSize = v === 90 ? undefined : v;
+					ctx.opts.save();
+				});
+		});
+		buttonSize.addExtraButton((b) =>
+			b
+				.setIcon("rotate-ccw")
+				.setTooltip(t().settings.resetSlider)
+				.onClick(() => {
+					card.tileSize = undefined;
+					ctx.opts.save();
+					ctx.requestRender();
+				}),
+		);
+	}
 
 	new Setting(containerEl).setName(t().editors.commands.heading).setHeading();
 	const commands = (ctx.card.commands ??= []);

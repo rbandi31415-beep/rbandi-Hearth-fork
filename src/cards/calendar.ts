@@ -1,4 +1,5 @@
 import { Component, setIcon, Setting, TFile } from "obsidian";
+import { addNumberField } from "../editors";
 import {
 	activityByDay,
 	dailyNotePath,
@@ -338,25 +339,18 @@ export function calendarEditor(ctx: CardEditorContext, containerEl: HTMLElement)
 		const days = new Setting(containerEl)
 			.setName(t().editors.calendar.agendaDays)
 			.setDesc(t().editors.calendar.agendaDaysDesc);
-		days.addSlider((s) => {
-			s.setLimits(3, 60, 1)
-				.setValue(cfg.agendaDays ?? 14)
-				.setDynamicTooltip()
-				.onChange((v) => {
-					cfg.agendaDays = v === 14 ? undefined : v;
-					ctx.opts.save();
-				});
+		addNumberField(ctx, days, {
+			value: cfg.agendaDays ?? 14,
+			min: 3,
+			max: 60,
+			default: 14,
+			set: (n) => {
+				cfg.agendaDays = n === 14 ? undefined : n;
+			},
+			clear: () => {
+				cfg.agendaDays = undefined;
+			},
 		});
-		days.addExtraButton((b) =>
-			b
-				.setIcon("rotate-ccw")
-				.setTooltip(t().settings.resetSlider)
-				.onClick(() => {
-					cfg.agendaDays = undefined;
-					ctx.opts.save();
-					ctx.requestRender();
-				}),
-		);
 	} else {
 		new Setting(containerEl)
 			.setName(t().editors.calendar.weekNumbers)

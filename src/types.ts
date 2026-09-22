@@ -29,6 +29,8 @@ export type CardKind =
 	| "searchbar"
 	| "heatmap"
 	| "trend"
+	| "folderchart"
+	| "newnotes"
 	| "calculator"
 	| "dataview"
 	| "datacore"
@@ -604,7 +606,7 @@ export interface SearchBarConfig {
 /** Per-card configuration for a "heatmap" (activity) card. */
 /** A single heatmap metric — one bucketer, one legend. "combined" isn't one
  * of these; it blends/splits a chosen set of them (see HeatmapConfig). */
-export type HeatmapMetric = "modified" | "created" | "commits" | "tasksCompleted";
+export type HeatmapMetric = "modified" | "created" | "commits" | "tasksCompleted" | "tasksScheduled";
 
 export interface HeatmapConfig {
 	/** Which timestamp to count, or "combined" to show several at once.
@@ -612,6 +614,11 @@ export interface HeatmapConfig {
 	metric?: HeatmapMetric | "combined";
 	/** How many weeks back to show. Default 26. */
 	weeks?: number;
+	/** How many weeks *past* the current one to also show — for a
+	 * forward-looking metric like "tasks scheduled". Default 0, except a plain
+	 * tasksScheduled card defaults to 4. Future cells are shaded like any
+	 * other; an explicit 0 turns the extension off. */
+	futureWeeks?: number;
 	/** metric === "combined": which metrics to include. Default
 	 * modified+created+commits. */
 	combinedMetrics?: HeatmapMetric[];
@@ -659,6 +666,48 @@ export interface TrendConfig {
 	bucket?: "day" | "week";
 }
 
+/** Per-card configuration for a "folderchart" card — vault notes grouped by
+ * folder, drawn as a radial or horizontal bar chart you can drill into. */
+export interface FolderChartConfig {
+	/** Subtrees to chart. Empty (or unset) = the whole vault. Several roots
+	 * show one bucket per root until you drill into one. */
+	roots?: string[];
+	/** Chart style. Default "radial". "sunburst" is a two-ring pie — top
+	 * folders in the inner ring, their subfolders in the outer. */
+	style?: "radial" | "bars" | "pie" | "sunburst";
+	/** Count every file, or just markdown notes. Default "notes". */
+	include?: "notes" | "files";
+	/** Cap the number of slices, rolling the remainder into one "Other" slice.
+	 * Default 12; 0 shows every folder. */
+	maxSlices?: number;
+	/** Slice order. Default "count" (largest first); "name" is alphabetical. */
+	sort?: "count" | "name";
+	/** Custom bar colour (hex). Undefined uses the theme accent. */
+	color?: string;
+}
+
+/** Per-card configuration for a "newnotes" card — how many notes matching a
+ * scope were created in a recent window, versus the window before it. */
+export interface NewNotesConfig {
+	/** What makes a note count. Default "tag". */
+	scopeKind?: "tag" | "folder" | "property";
+	/** scopeKind === "tag": the tag (with or without "#"); subtags count. */
+	tag?: string;
+	/** scopeKind === "folder": the subtree ("" / unset = whole vault). */
+	folder?: string;
+	/** scopeKind === "property": the frontmatter key that must be present. */
+	propertyKey?: string;
+	/** scopeKind === "property": require this value (optional — unset just
+	 * needs the key present). */
+	propertyValue?: string;
+	/** Window length in days. Default 30, capped at 365. */
+	days?: number;
+	/** List the matching notes below the count. Default off. */
+	showList?: boolean;
+	/** Draw a per-day sparkline of the window. Default off. */
+	showSparkline?: boolean;
+}
+
 /** The built-in vault statistics a "stats" card can show. */
 export type StatId =
 	| "notes"
@@ -669,7 +718,12 @@ export type StatId =
 	| "daysUsing"
 	| "tasksOverdue"
 	| "tasksPlanned"
-	| "hoursPlanned";
+	| "hoursPlanned"
+	| "orphans"
+	| "brokenLinks"
+	| "totalLinks"
+	| "staleNotes"
+	| "vaultSize";
 
 /** The built-in stats in their default display order — the fixed layout a
  * "stats" card has always shown, kept in one place so a card with no advanced
@@ -687,7 +741,18 @@ export const DEFAULT_STATS: StatId[] = [
  * DEFAULT_STATS with opt-in stats a user can turn on in advanced mode. Must
  * begin with DEFAULT_STATS in the same order so "all defaults selected" round
  * trips back to the unconfigured (undefined) state. */
-export const ALL_STATS: StatId[] = [...DEFAULT_STATS, "daysUsing", "tasksOverdue", "tasksPlanned", "hoursPlanned"];
+export const ALL_STATS: StatId[] = [
+	...DEFAULT_STATS,
+	"daysUsing",
+	"tasksOverdue",
+	"tasksPlanned",
+	"hoursPlanned",
+	"orphans",
+	"brokenLinks",
+	"totalLinks",
+	"staleNotes",
+	"vaultSize",
+];
 
 /** Lucide icon id (Obsidian setIcon) for each built-in stat. Shared by the card
  * renderer and its editor so the tile icon and the editor chip never drift. */
@@ -701,6 +766,11 @@ export const STAT_ICONS: Record<StatId, string> = {
 	tasksOverdue: "alarm-clock",
 	tasksPlanned: "calendar-check",
 	hoursPlanned: "hourglass",
+	orphans: "unlink",
+	brokenLinks: "unplug",
+	totalLinks: "link",
+	staleNotes: "history",
+	vaultSize: "hard-drive",
 };
 
 /** A user-defined stat tile that counts the files matching a query. */
@@ -732,6 +802,9 @@ export interface StatsConfig {
 	attachmentTypes?: string[];
 	/** User-defined query-count tiles. Only consulted when `advanced` is on. */
 	queries?: StatsQuery[];
+	/** How many days since a note's last edit before it counts toward the
+	 * "Stale notes" tile. Default 180. */
+	staleDays?: number;
 	/** Shrink tile icon/text size just enough that every tile fits the card
 	 * without scrolling, however many are selected. Off (default) keeps tiles
 	 * at their normal size, which can overflow a small card once enough are
@@ -1410,6 +1483,10 @@ export interface DashboardCard {
 	heatmap?: HeatmapConfig;
 	/** kind === "trend": metric, range and line options for the activity graph. */
 	trend?: TrendConfig;
+	/** kind === "folderchart": which subtrees, bar style and slice options. */
+	folderChart?: FolderChartConfig;
+	/** kind === "newnotes": scope and window for the recent-notes count. */
+	newNotes?: NewNotesConfig;
 	/** kind === "stats": which stats to show, attachment breakdown and custom
 	 * query counts (all gated behind the config's `advanced` flag). */
 	stats?: StatsConfig;
@@ -1480,6 +1557,16 @@ export interface DashboardCard {
 	 * reorders live like phone widgets. Default off — tiles are pure
 	 * free-form and may overlap. */
 	tileAutoFlow?: boolean;
+
+	/** kind === "commands": how tiles are sized and positioned.
+	 * "freeform" (default, or omitted) is the drag/resize/free-position grid
+	 * driven by `tileSize`/`tileAutoFlow` and each tile's own size/col/row.
+	 * "even" ignores all of that per-tile placement data (kept on disk, but
+	 * unused while this mode is active) and instead splits the card into a
+	 * roughly-square grid where every tile in a row shares that row's height
+	 * and width equally, scaling with the card's size — e.g. 4 tiles become
+	 * a 2×2 grid of quadrants. */
+	tileLayout?: "freeform" | "even";
 
 	/** Show a button that opens the card's file in the editor.
 	 *

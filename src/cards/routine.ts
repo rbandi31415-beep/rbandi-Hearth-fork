@@ -1,7 +1,7 @@
 import { Notice, Setting, TFile, setIcon } from "obsidian";
 import { emptyState, moment } from "../cardbodies";
 import { localDayKey } from "../dates";
-import { addResetButton, moveItem } from "../editors";
+import { addNumberField, moveItem } from "../editors";
 import { t } from "../i18n";
 import { FilePickerModal } from "../pickers";
 import {
@@ -40,7 +40,7 @@ import { type CardDefinition, type CardEditorContext } from "./definition";
 // threshold rules live in ../routine.ts.
 
 const DEFAULT_DAYS = 30;
-const MIN_DAYS = 7;
+const MIN_DAYS = 1;
 const MAX_DAYS = 120;
 const DEFAULT_FILE = "Meta/Routine Log.csv";
 
@@ -355,17 +355,17 @@ export function routineEditor(ctx: CardEditorContext, containerEl: HTMLElement):
 	const days = new Setting(containerEl)
 		.setName(t().editors.routine.days)
 		.setDesc(t().editors.routine.daysDesc);
-	days.addSlider((s) =>
-		s
-			.setLimits(MIN_DAYS, MAX_DAYS, 1)
-			.setValue(cfg.days ?? DEFAULT_DAYS)
-			.onChange((v) => {
-				cfg.days = v === DEFAULT_DAYS ? undefined : v;
-				ctx.opts.save();
-			}),
-	);
-	addResetButton(ctx, days, t().settings.resetSlider, () => {
-		cfg.days = undefined;
+	addNumberField(ctx, days, {
+		value: cfg.days ?? DEFAULT_DAYS,
+		min: MIN_DAYS,
+		max: MAX_DAYS,
+		default: DEFAULT_DAYS,
+		set: (n) => {
+			cfg.days = n === DEFAULT_DAYS ? undefined : n;
+		},
+		clear: () => {
+			cfg.days = undefined;
+		},
 	});
 
 	new Setting(containerEl).setName(t().editors.routine.sessionsHeading).setHeading();

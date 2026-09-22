@@ -1,6 +1,6 @@
 import { type Component, debounce, getAllTags, setIcon, Setting, TFile, TFolder } from "obsidian";
 import { dailyNotePath, dailyNotesOptions, moment, type Moment } from "../cardbodies";
-import { addResetButton, moveItem } from "../editors";
+import { addNumberField, addResetButton, moveItem } from "../editors";
 import { FILE_TYPE_GROUPS, fileTypeLabel, FOLDERS_GROUP_ID, groupById, groupForFile } from "../filetypes";
 import { t } from "../i18n";
 import { countQuery } from "../query";
@@ -29,6 +29,11 @@ export function renderStats(view: HomeView, card: DashboardCard, body: HTMLEleme
 	// Oldest file creation time across the whole vault — the "days using Obsidian"
 	// stat counts from here. Infinity so the first file always wins the min.
 	let oldestCtime = Infinity;
+	// Bytes across every file (notes + attachments), and notes whose last edit is
+	// older than the stale cutoff — both free off `file.stat` in the pass below.
+	let totalBytes = 0;
+	let staleNotes = 0;
+	const staleCutoff = Date.now() - Math.max(1, cfg?.staleDays ?? 180) * 86_400_000;
 	// Single pass over the loaded files: counts plus the tag set (collected
 	// inline for markdown files) instead of a second full getMarkdownFiles scan.
 	// Per-file-type-group counts feed the advanced attachment breakdown.
@@ -40,6 +45,7 @@ export function renderStats(view: HomeView, card: DashboardCard, body: HTMLEleme
 		} else if (f instanceof TFile) {
 			if (f.extension.toLowerCase() === "md") {
 				notes++;
+				if (f.stat.mtime > 0 && f.stat.mtime < staleCutoff) staleNotes++;
 				const cache = view.app.metadataCache.getFileCache(f);
 				if (cache) {
 					for (const t of getAllTags(cache) ?? []) tags.add(t.toLowerCase());
@@ -47,6 +53,7 @@ export function renderStats(view: HomeView, card: DashboardCard, body: HTMLEleme
 			} else {
 				attachments++;
 			}
+			totalBytes += f.stat.size;
 			if (f.stat.ctime > 0 && f.stat.ctime < oldestCtime) oldestCtime = f.stat.ctime;
 			if (advanced) {
 				const group = groupForFile(f);
@@ -68,7 +75,26 @@ export function renderStats(view: HomeView, card: DashboardCard, body: HTMLEleme
 		builtins.includes("tasksOverdue") || builtins.includes("tasksPlanned") || builtins.includes("hoursPlanned");
 	const taskCounts = needsTaskCounts ? taskDateCounts(view.app) : { overdue: 0, planned: 0, plannedMinutes: 0 };
 
-	const values: Record<StatId, number> = {
+	// Orphans: markdown notes with no resolved link in either direction — the
+	// same notion as Obsidian's graph "no links" filter. Only computed when the
+	// tile is shown; walks the link graph once to collect every linked path.
+	const orphans = builtins.includes("orphans") ? orphanNoteCount(view) : 0;
+
+	// Link totals from the already-resolved graph: `totalLinks` sums every
+	// resolved wikilink, `brokenLinks` every link whose target doesn't exist.
+	let totalLinks = 0;
+	let brokenLinks = 0;
+	if (builtins.includes("totalLinks") || builtins.includes("brokenLinks")) {
+		const mc = view.app.metadataCache;
+		for (const targets of Object.values(mc.resolvedLinks ?? {})) {
+			for (const count of Object.values(targets)) totalLinks += count;
+		}
+		for (const targets of Object.values(mc.unresolvedLinks ?? {})) {
+			for (const count of Object.values(targets)) brokenLinks += count;
+		}
+	}
+
+	const values: Record<StatId, number | string> = {
 		notes,
 		attachments,
 		folders,
@@ -80,6 +106,11 @@ export function renderStats(view: HomeView, card: DashboardCard, body: HTMLEleme
 		// Rounded to one decimal place — a whole number of minutes almost never
 		// lands on a whole number of hours.
 		hoursPlanned: Math.round((taskCounts.plannedMinutes / 60) * 10) / 10,
+		orphans,
+		brokenLinks,
+		totalLinks,
+		staleNotes,
+		vaultSize: formatBytes(totalBytes),
 	};
 	const streak = dailyNoteStreak(view);
 
@@ -114,7 +145,21 @@ export function renderStats(view: HomeView, card: DashboardCard, body: HTMLEleme
 }
 
 
-function addStat(grid: HTMLElement, icon: string, value: number, label: string): void {
+/** Bytes as a compact human string: "820 B", "4.2 KB", "1.3 GB". */
+function formatBytes(bytes: number): string {
+	if (bytes < 1024) return `${bytes} B`;
+	const units = ["KB", "MB", "GB", "TB"];
+	let n = bytes / 1024;
+	let unit = 0;
+	while (n >= 1024 && unit < units.length - 1) {
+		n /= 1024;
+		unit++;
+	}
+	return `${n < 10 ? n.toFixed(1) : Math.round(n)} ${units[unit]}`;
+}
+
+
+function addStat(grid: HTMLElement, icon: string, value: number | string, label: string): void {
 	const cell = grid.createDiv("hearth-stat");
 	setIcon(cell.createDiv("hearth-stat-icon"), icon);
 	cell.createDiv({ cls: "hearth-stat-value", text: String(value) });
@@ -155,6 +200,34 @@ function fitStatsToCard(component: Component, body: HTMLElement, grid: HTMLEleme
 	const observer = new ResizeObserver(debounce(fit, 60, true));
 	observer.observe(body);
 	component.register(() => observer.disconnect());
+}
+
+
+/**
+ * Markdown notes that neither link to anything nor are linked to — Obsidian's
+ * graph "no links" set. A note counts as connected if it has any outgoing link
+ * (resolved or not) or appears as the target of another note's resolved link;
+ * everything else in the vault's markdown file list is an orphan.
+ */
+function orphanNoteCount(view: HomeView): number {
+	const cache = view.app.metadataCache;
+	const resolved = cache.resolvedLinks ?? {};
+	const unresolved = cache.unresolvedLinks ?? {};
+	const connected = new Set<string>();
+	for (const [source, targets] of Object.entries(resolved)) {
+		const keys = Object.keys(targets);
+		if (keys.length === 0) continue;
+		connected.add(source);
+		for (const target of keys) connected.add(target);
+	}
+	for (const [source, targets] of Object.entries(unresolved)) {
+		if (Object.keys(targets).length > 0) connected.add(source);
+	}
+	let orphans = 0;
+	for (const file of view.app.vault.getMarkdownFiles()) {
+		if (!connected.has(file.path)) orphans++;
+	}
+	return orphans;
 }
 
 
@@ -258,6 +331,22 @@ export function statsEditor(ctx: CardEditorContext, containerEl: HTMLElement): v
 			}
 		});
 	}
+
+	const stale = new Setting(containerEl)
+		.setName(t().editors.stats.staleDays)
+		.setDesc(t().editors.stats.staleDaysDesc);
+	addNumberField(ctx, stale, {
+		value: cfg.staleDays ?? 180,
+		min: 1,
+		max: 3650,
+		default: 180,
+		set: (n) => {
+			cfg.staleDays = n === 180 ? undefined : n;
+		},
+		clear: () => {
+			cfg.staleDays = undefined;
+		},
+	});
 
 	// ---- Attachment breakdown by file type ---------------------------------
 	new Setting(containerEl).setName(t().editors.stats.attachmentTypes).setHeading();
