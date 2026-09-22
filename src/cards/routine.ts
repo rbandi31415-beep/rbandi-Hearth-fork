@@ -47,7 +47,7 @@ const DEFAULT_FILE = "Meta/Routine Log.csv";
 
 /** The card's CSV path, normalised to end in ".csv". Null when unset. */
 function resolvedFile(card: DashboardCard): string | null {
-	const raw = card.routine?.file?.trim();
+	const raw = card.routine?.file?.trim().replace(/\\/g, "/");
 	if (!raw) return null;
 	return raw.toLowerCase().endsWith(".csv") ? raw : `${raw}.csv`;
 }
@@ -346,7 +346,7 @@ export function routineEditor(ctx: CardEditorContext, containerEl: HTMLElement):
 				.setPlaceholder(DEFAULT_FILE)
 				.setValue(cfg.file ?? "")
 				.onChange((v) => {
-					cfg.file = v.trim() || undefined;
+					cfg.file = v.trim().replace(/\\/g, "/") || undefined;
 					ctx.opts.save();
 					ctx.requestRender();
 				}),
