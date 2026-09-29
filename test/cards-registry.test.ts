@@ -150,6 +150,19 @@ describe("CARD_TEMPLATES (add-card menu)", () => {
 				requires: "Hostable side-panel views",
 				build: { kind: "leaf", title: "Plugin view", leafView: {}, w: 5, h: 4 },
 			},
+			{
+				id: "peopleCadence",
+				icon: "users",
+				category: "integrations",
+				requires: null,
+				build: {
+					kind: "peopleCadence",
+					title: "People cadence",
+					peopleCadence: { count: 5, refreshMin: 2, cacheMin: 1 },
+					w: 4,
+					h: 4,
+				},
+			},
 
 			// ---- Fun ----
 			{ id: "pet", icon: "cat", category: "fun", requires: null, build: { kind: "pet", title: "Pet", pet: {}, w: 3, h: 4 } },
@@ -258,6 +271,7 @@ function maximalCard(): DashboardCard {
 		weather: { place: { name: "Prague", lat: 50.08, lon: 14.44 } },
 		git: { sections: ["status", "actions"], actions: ["commit", "push"] },
 		pet: { species: "fox", name: "Vulpes" },
+		peopleCadence: { host: "https://example.com", token: "t", count: 5 },
 	};
 }
 
@@ -304,6 +318,7 @@ describe("cloneCard deep-clone independence", () => {
 		copy.git!.sections!.push("log");
 		copy.git!.actions!.push("pull");
 		copy.pet!.name = "Renard";
+		copy.peopleCadence!.count = 9;
 
 		// ...and confirm none of it reached the original.
 		const pristine = maximalCard();
@@ -327,6 +342,7 @@ describe("cloneCard deep-clone independence", () => {
 		expect(orig.weather).toEqual(pristine.weather);
 		expect(orig.git).toEqual(pristine.git);
 		expect(orig.pet).toEqual(pristine.pet);
+		expect(orig.peopleCadence).toEqual(pristine.peopleCadence);
 	});
 });
 
@@ -375,6 +391,7 @@ describe("liveness classification", () => {
 			question: "watch-file",
 			stamps: "watch-file",
 			routine: "watch-file",
+			peopleCadence: "static",
 		});
 	});
 });

@@ -43,7 +43,8 @@ export type CardKind =
 	| "randomNote"
 	| "question"
 	| "stamps"
-	| "routine";
+	| "routine"
+	| "peopleCadence";
 
 /** A refinement control available on a Jira saved-filter card. */
 export type JiraControl =
@@ -78,6 +79,20 @@ export interface JiraConfig {
 	/** Automatic refresh interval in minutes. 0 disables it. */
 	refreshMin?: number;
 	/** In-memory request cache interval in minutes. Default 5. */
+	cacheMin?: number;
+}
+
+/** Per-card connection and display settings for the "peopleCadence" card. */
+export interface PeopleCadenceConfig {
+	/** Origin (https scheme + host) of the contact-cadence feed. */
+	host?: string;
+	/** Bearer token for the feed. Stored in Obsidian plugin data. */
+	token?: string;
+	/** How many lowest-depth people the compact card shows. Default 5. */
+	count?: number;
+	/** Automatic refresh interval in minutes. 0 disables it. */
+	refreshMin?: number;
+	/** In-memory request cache interval in minutes. Default 1. */
 	cacheMin?: number;
 }
 
@@ -1508,6 +1523,8 @@ export interface DashboardCard {
 	leafView?: LeafViewConfig;
 	/** kind === "pet": species, colors, name and what feeds its mood. */
 	pet?: PetConfig;
+	/** kind === "peopleCadence": feed connection and how many people to show. */
+	peopleCadence?: PeopleCadenceConfig;
 
 	// ---- Live content ----
 	/** Auto-refresh interval in seconds for live content (embed / web). 0 or

@@ -43,6 +43,7 @@ import { randomNoteCard } from "./randomNote";
 import { questionCard } from "./question";
 import { stampsCard } from "./stamps";
 import { routineCard } from "./routine";
+import { peopleCadenceCard } from "./peoplecadence";
 
 export type {
 	CardCategory,
@@ -96,6 +97,7 @@ export const CARD_DEFINITIONS: { [K in CardKind]: CardDefinition<K> } = {
 	question: questionCard,
 	stamps: stampsCard,
 	routine: routineCard,
+	peopleCadence: peopleCadenceCard,
 };
 
 /** Every registered kind, in registry order. Used for layout-import validation
@@ -140,7 +142,7 @@ export const TEMPLATE_MENU_GROUPS: { category: CardCategory; templates: string[]
 	{ category: "planning", templates: ["tasks", "schedule", "calendar", "clock", "routine"] },
 	{ category: "vault", templates: ["search", "searchbar", "stats", "heatmap", "trend", "folderchart", "newnotes", "stamps"] },
 	{ category: "tools", templates: ["links", "commands", "text", "calculator", "web"] },
-	{ category: "integrations", templates: ["templater", "dataview", "datacore", "git", "jira", "rss", "weather", "leaf"] },
+	{ category: "integrations", templates: ["templater", "dataview", "datacore", "git", "jira", "rss", "weather", "leaf", "peopleCadence"] },
 	{ category: "fun", templates: ["pet", "question"] },
 ];
 

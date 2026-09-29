@@ -1099,6 +1099,13 @@ export const en = {
 						"The search bar's button can send your query to DuckDuckGo instead of " +
 						"creating a note. Switch it under Search → Search bar.",
 				},
+				peopleCadence: {
+					name: "People cadence feed",
+					desc:
+						"The People cadence card polls a contact-cadence feed you point it at " +
+						"— host and bearer token you enter on the card. Hearth only reads it; " +
+						"it never computes or writes anything back.",
+				},
 			},
 		},
 		tasks: {
@@ -1288,6 +1295,7 @@ export const en = {
 			question: "Daily question",
 			stamps: "Ritual stamps",
 			routine: "Routine checklist",
+			peopleCadence: "People cadence",
 		},
 		linkTypes: {
 			note: "Note",
@@ -2462,6 +2470,19 @@ export const en = {
 			cache: "Cache interval (minutes)",
 			cacheDesc: "How long successful Jira responses stay in memory. 0 disables caching.",
 		},
+		peopleCadence: {
+			host: "Feed host",
+			hostDesc: "The contact-cadence feed's origin. HTTPS is required when sending a bearer token.",
+			hostPlaceholder: "https://example.com",
+			token: "Bearer token",
+			tokenDesc: "Token used for this card's requests. Stored in Hearth's plugin data.",
+			count: "People shown on the card",
+			countDesc: "How many lowest-depth people the compact card lists, up to 50.",
+			refresh: "Auto-refresh (minutes)",
+			refreshDesc: "How often to re-poll the feed. 0 = only when opened or refreshed manually.",
+			cache: "Cache interval (minutes)",
+			cacheDesc: "How long a successful response stays in memory. 0 disables caching.",
+		},
 		leaf: {
 			view: "View to host",
 			viewDesc:
@@ -2768,6 +2789,25 @@ export const en = {
 			empty: "No issues match these filters",
 			disabled: "Jira is off (external calls disabled)",
 			notConfigured: "Configure a Jira host, token, and saved filter in card settings",
+		},
+		peopleCadence: {
+			detailTitle: "People cadence",
+			viewAll: "View all",
+			loading: "Loading…",
+			error: "Couldn't load the cadence feed",
+			empty: "The feed has no one to show yet",
+			disabled: "People cadence is off (external calls disabled)",
+			notConfigured: "Configure a feed host and token in card settings",
+			depthLabel: (depth: string) => `depth ${depth}`,
+			lastContactVia: (when: string, medium: string) => `${when} via ${medium}`,
+			mediumLabels: {
+				imessage: "iMessage",
+				imessage_group: "a group chat",
+				memory: "in person",
+			},
+			sortByDepth: "Lowest depth",
+			sortByRecency: "Least recent",
+			refresh: "Refresh",
 		},
 		git: {
 			sections: {
@@ -3167,6 +3207,7 @@ export const en = {
 		question: "Daily question",
 		stamps: "Ritual stamps",
 		routine: "Routine checklist",
+		peopleCadence: "People cadence",
 	},
 
 	/** One line per template, shown under its name in the add-card picker and
@@ -3212,6 +3253,7 @@ export const en = {
 		question: "A thought-provoking question, one per day",
 		stamps: "When you last did a recurring chore, one tap to update it",
 		routine: "A daily checklist grid that ticks off your routine's task note",
+		peopleCadence: "Who you're drifting from, from a contact-cadence feed you point it at",
 	},
 
 	// ---- Add-card picker -----------------------------------------------
