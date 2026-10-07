@@ -66,6 +66,7 @@ function task(overrides: Partial<TaskNotesTask> = {}): TaskNotesTask {
 		scheduled: null,
 		recurrence: null,
 		completeInstances: [],
+		completedDate: null,
 		contexts: [],
 		projects: [],
 		timeEstimate: null,
@@ -271,6 +272,18 @@ describe("readTaskNotesTask", () => {
 	it("marks a task carrying the archive tag", () => {
 		const read = readTaskNotesTask(setup, "a.md", { status: "open" }, ["task", "archived"]);
 		expect(read?.archived).toBe(true);
+	});
+
+	it("reads completedDate as a day key, or null when absent", () => {
+		const done = readTaskNotesTask(
+			setup,
+			"a.md",
+			{ status: "done", completedDate: "2026-08-10T14:30:00" },
+			["task"],
+		);
+		expect(done?.completedDate).toBe("2026-08-10");
+		const none = readTaskNotesTask(setup, "b.md", { status: "done" }, ["task"]);
+		expect(none?.completedDate).toBeNull();
 	});
 
 	it("falls back to the filename when no title property is set", () => {

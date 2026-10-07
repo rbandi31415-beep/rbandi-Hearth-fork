@@ -372,6 +372,8 @@ export interface TaskNotesTask {
 	scheduled: string | null;
 	recurrence: string | null;
 	completeInstances: string[];
+	/** The day (YYYY-MM-DD) TaskNotes stamped on completion, when present. */
+	completedDate: string | null;
 	contexts: string[];
 	projects: string[];
 	/** Minutes, when the task carries an estimate. */
@@ -409,6 +411,7 @@ export function readTaskNotesTask(
 		scheduled: str(frontmatter[f.scheduled]) || null,
 		recurrence: str(frontmatter[f.recurrence]) || null,
 		completeInstances: strList(frontmatter[f.completeInstances]).map((d) => d.slice(0, 10)),
+		completedDate: str(frontmatter[f.completedDate]).slice(0, 10) || null,
 		contexts: strList(frontmatter[f.contexts]),
 		projects,
 		timeEstimate: num(frontmatter[f.timeEstimate]),
@@ -1025,12 +1028,10 @@ export function collectTaskNotesTasks(app: App, setup: TaskNotesSetup): TaskNote
 /**
  * Completion counts per local day, for the heatmap's "tasks completed"
  * metric. A recurring task's completions are exact — `completeInstances`
- * records the actual day. A one-off completed task has no stored completion
- * date in TaskNotes' own data, only a done/not-done status, so it falls back
- * to the note's last-modified day: usually close (you tend to save right
- * after checking something off) but not exact — an edit made well after
- * completion would misattribute the day. See DEFERRED_FEATURES.md for what a
- * fully accurate version would need.
+ * records the actual day. A one-off completed task counts on the day in its
+ * `completedDate` field. One without that field (completed before TaskNotes
+ * stamped it, or by a tool that doesn't) is skipped rather than guessed from
+ * the note's mtime, which a bulk edit or sync would collapse onto one day.
  */
 export function tasksCompletedByDay(app: App): Map<string, number> {
 	const counts = new Map<string, number>();
@@ -1044,10 +1045,8 @@ export function tasksCompletedByDay(app: App): Map<string, number> {
 			}
 			continue;
 		}
-		if (!task.done) continue;
-		const file = app.vault.getAbstractFileByPath(task.path);
-		if (!(file instanceof TFile)) continue;
-		const key = localDayKey(file.stat.mtime);
+		if (!task.done || !task.completedDate) continue;
+		const key = task.completedDate;
 		counts.set(key, (counts.get(key) ?? 0) + 1);
 	}
 	return counts;
