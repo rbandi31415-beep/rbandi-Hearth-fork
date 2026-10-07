@@ -747,18 +747,62 @@ export function parseCommitDate(raw: string | undefined): number | null {
 	return Number.isNaN(ms) ? null : ms;
 }
 
+/** How far back the commits metric reads by default: the heatmap's 53 weeks. */
+const COMMITS_WINDOW_DAYS = 53 * 7;
+
+/** First batch size for {@link commitsSince}; each retry doubles it. */
+const COMMIT_LOG_BATCH = 1000;
+
+/** Hard stop on the log read, so a pathological repo can't stall a refresh. */
+const COMMIT_LOG_CEILING = 256_000;
+
 /**
- * Commit counts per local day, for the heatmap's "commits" metric. Reads a
- * generous but bounded log (`limit`) rather than the whole history — a
- * personal vault's repo is small enough that this comfortably covers a
- * 53-week heatmap, and it stays a single bounded read either way.
+ * Every commit on or after `sinceMs`, newest first. obsidian-git's `log` takes
+ * a count, not a date, so this reads growing batches (1000, 2000, 4000, …)
+ * until the oldest commit fetched predates `sinceMs`, the history runs out, or
+ * the ceiling is hit. A fixed count can't work: a vault with automatic backups
+ * commits dozens of times a day, and any constant eventually stops short of
+ * the window it was meant to cover.
  */
-export async function commitsByDay(app: App, limit = 1000): Promise<Map<string, number>> {
+export async function commitsSince(plugin: GitPlugin, sinceMs: number): Promise<GitLogEntry[]> {
+	const manager = plugin.gitManager;
+	if (!plugin.gitReady || typeof manager.log !== "function") return [];
+	let limit = COMMIT_LOG_BATCH;
+	let entries: GitLogEntry[] = [];
+	for (;;) {
+		try {
+			entries = await manager.log(undefined, false, limit);
+		} catch {
+			// Empty repo, or a backend that can't log without a file.
+			return [];
+		}
+		const oldest = parseCommitDate(entries[entries.length - 1]?.date);
+		const exhausted = entries.length < limit;
+		if (exhausted || (oldest != null && oldest < sinceMs) || limit >= COMMIT_LOG_CEILING) break;
+		limit *= 2;
+	}
+	return entries.filter((entry) => {
+		const ms = parseCommitDate(entry.date);
+		return ms != null && ms >= sinceMs;
+	});
+}
+
+/**
+ * Commit counts per local day, for the heatmap/trend "commits" metric. Covers
+ * the last `windowDays` days (53 weeks by default, the heatmap's span),
+ * however many commits that is — see {@link commitsSince}.
+ */
+export async function commitsByDay(
+	app: App,
+	windowDays = COMMITS_WINDOW_DAYS,
+): Promise<Map<string, number>> {
 	const counts = new Map<string, number>();
 	const plugin = getGitPlugin(app);
 	if (!plugin) return counts;
-	const snapshot = await readGitSnapshot(plugin, { logLimit: limit, includeSync: false });
-	for (const entry of snapshot.log ?? []) {
+	const start = new Date();
+	start.setHours(0, 0, 0, 0);
+	start.setDate(start.getDate() - windowDays);
+	for (const entry of await commitsSince(plugin, start.getTime())) {
 		const ms = parseCommitDate(entry.date);
 		if (ms == null) continue;
 		const key = localDayKey(ms);

@@ -3,6 +3,7 @@ import {
 	GIT_DEFAULT_ACTIONS,
 	GIT_DEFAULT_SECTIONS,
 	commitSummary,
+	commitsSince,
 	gitActionAvailable,
 	gitActionTask,
 	gitActions,
@@ -349,6 +350,51 @@ describe("queueGitFileAction", () => {
 
 	it("reports failure when the backend can't do it", () => {
 		expect(queueGitFileAction(fakePlugin(), "discard", "a.md")).toBe(false);
+	});
+});
+
+describe("commitsSince", () => {
+	const DAY = 86_400_000;
+	const NOW = Date.UTC(2026, 9, 7, 12);
+	/** A newest-first history of `n` commits, one every `gapMs`, with a log()
+	 * that honours the requested limit like the real backend. */
+	function history(n: number, gapMs: number) {
+		const all = Array.from({ length: n }, (_, i) => ({
+			hash: `h${i}`,
+			date: new Date(NOW - i * gapMs).toISOString(),
+			message: "backup",
+			refs: [],
+			author: { name: "a", email: "a@b.c" },
+		}));
+		return vi.fn(async (_f: unknown, _r: unknown, limit?: number) => all.slice(0, limit));
+	}
+
+	it("keeps reading past the first batch until the window is covered", async () => {
+		// 3000 commits, one every 10 minutes: ~21 days, far beyond a 1000 cap.
+		const log = history(3000, 600_000);
+		const out = await commitsSince(fakePlugin({ gitManager: { log } }), NOW - 20 * DAY);
+		expect(log.mock.calls.map((c) => c[2])).toEqual([1000, 2000, 4000]);
+		expect(out.length).toBeGreaterThan(2800);
+		expect(out.every((e) => Date.parse(e.date) >= NOW - 20 * DAY)).toBe(true);
+	});
+
+	it("stops after one batch when it already reaches the cutoff", async () => {
+		const log = history(5000, 600_000);
+		const out = await commitsSince(fakePlugin({ gitManager: { log } }), NOW - DAY);
+		expect(log).toHaveBeenCalledTimes(1);
+		expect(out).toHaveLength(145);
+	});
+
+	it("stops when the history runs out before the cutoff", async () => {
+		const log = history(1500, DAY);
+		const out = await commitsSince(fakePlugin({ gitManager: { log } }), NOW - 10_000 * DAY);
+		expect(log.mock.calls.map((c) => c[2])).toEqual([1000, 2000]);
+		expect(out).toHaveLength(1500);
+	});
+
+	it("returns nothing for an unreadable log", async () => {
+		const log = vi.fn().mockRejectedValue(new Error("no commits"));
+		expect(await commitsSince(fakePlugin({ gitManager: { log } }), 0)).toEqual([]);
 	});
 });
 
