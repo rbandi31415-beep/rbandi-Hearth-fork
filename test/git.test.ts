@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
 	GIT_DEFAULT_ACTIONS,
 	GIT_DEFAULT_SECTIONS,
+	commitCountsByDay,
 	commitSummary,
 	commitsSince,
 	gitActionAvailable,
@@ -395,6 +396,48 @@ describe("commitsSince", () => {
 	it("returns nothing for an unreadable log", async () => {
 		const log = vi.fn().mockRejectedValue(new Error("no commits"));
 		expect(await commitsSince(fakePlugin({ gitManager: { log } }), 0)).toEqual([]);
+	});
+});
+
+describe("commitCountsByDay", () => {
+	/** A plugin whose newest-first log is whatever `commits` currently holds. */
+	function plugin(commits: { hash: string; date: string }[]) {
+		const log = vi.fn(async (_f: unknown, _r: unknown, limit?: number) =>
+			commits.slice(0, limit).map((c) => ({ ...c, message: "", refs: [], author: { name: "", email: "" } })),
+		);
+		return { p: fakePlugin({ gitManager: { log } }), log, commits };
+	}
+	const now = Date.now();
+
+	it("serves repeat calls from the cache while HEAD is unchanged", async () => {
+		const { p, log } = plugin([{ hash: "a", date: new Date(now).toISOString() }]);
+		const first = await commitCountsByDay(p, 30);
+		const callsAfterFirst = log.mock.calls.length;
+		const second = await commitCountsByDay(p, 30);
+		expect(second).toEqual(first);
+		// Only the one-commit HEAD probe ran the second time.
+		expect(log.mock.calls.slice(callsAfterFirst).map((c) => c[2])).toEqual([1]);
+	});
+
+	it("recomputes when a new commit moves HEAD", async () => {
+		const { p, commits } = plugin([{ hash: "a", date: new Date(now).toISOString() }]);
+		const before = [...(await commitCountsByDay(p, 30)).values()].reduce((x, y) => x + y, 0);
+		commits.unshift({ hash: "b", date: new Date(now).toISOString() });
+		const after = [...(await commitCountsByDay(p, 30)).values()].reduce((x, y) => x + y, 0);
+		expect([before, after]).toEqual([1, 2]);
+	});
+
+	it("shares one read between concurrent callers", async () => {
+		const { p, log } = plugin([{ hash: "a", date: new Date(now).toISOString() }]);
+		await Promise.all([commitCountsByDay(p, 30), commitCountsByDay(p, 30)]);
+		// Two HEAD probes plus a single window read (one batch for this tiny repo).
+		expect(log.mock.calls.filter((c) => c[2] !== 1)).toHaveLength(1);
+	});
+
+	it("hands out copies so a caller can't corrupt the cache", async () => {
+		const { p } = plugin([{ hash: "a", date: new Date(now).toISOString() }]);
+		(await commitCountsByDay(p, 30)).clear();
+		expect((await commitCountsByDay(p, 30)).size).toBe(1);
 	});
 });
 

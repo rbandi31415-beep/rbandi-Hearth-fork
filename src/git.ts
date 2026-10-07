@@ -787,28 +787,91 @@ export async function commitsSince(plugin: GitPlugin, sinceMs: number): Promise<
 	});
 }
 
+/** A computed per-day count and what it is valid for. */
+interface CommitCountsCacheEntry {
+	/** Hash of the newest commit when it was computed. */
+	head: string;
+	/** Local day the window started on; a new day moves the window. */
+	startKey: string;
+	counts: Promise<Map<string, number>>;
+}
+
+/** Per plugin instance (so a reloaded obsidian-git starts clean), then per
+ * window size. */
+const commitCountsCache = new WeakMap<GitPlugin, Map<number, CommitCountsCacheEntry>>();
+
+/** Hash of the newest commit, or null for an empty repo / backend without a log.
+ * One commit is a cheap read next to the whole window. */
+async function headHash(plugin: GitPlugin): Promise<string | null> {
+	if (typeof plugin.gitManager.log !== "function") return null;
+	try {
+		return (await plugin.gitManager.log(undefined, false, 1))[0]?.hash ?? null;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Commit counts per local day over the last `windowDays` days, cached. The
+ * window can be tens of thousands of commits on an auto-backup vault, so the
+ * result is reused until the newest commit's hash changes (any commit, pull or
+ * rebase moves it) or the local day rolls over. Validating against the hash,
+ * rather than listening for obsidian-git's head-change event, means a missed
+ * event can never serve stale data. Concurrent callers share one read, and a
+ * failed read is not kept.
+ */
+export async function commitCountsByDay(
+	plugin: GitPlugin,
+	windowDays = COMMITS_WINDOW_DAYS,
+): Promise<Map<string, number>> {
+	const start = new Date();
+	start.setHours(0, 0, 0, 0);
+	start.setDate(start.getDate() - windowDays);
+	const startKey = localDayKey(start.getTime());
+
+	const compute = async (): Promise<Map<string, number>> => {
+		const counts = new Map<string, number>();
+		for (const entry of await commitsSince(plugin, start.getTime())) {
+			const ms = parseCommitDate(entry.date);
+			if (ms == null) continue;
+			const key = localDayKey(ms);
+			counts.set(key, (counts.get(key) ?? 0) + 1);
+		}
+		return counts;
+	};
+
+	const head = await headHash(plugin);
+	if (head == null) return compute();
+
+	let byWindow = commitCountsCache.get(plugin);
+	if (!byWindow) commitCountsCache.set(plugin, (byWindow = new Map()));
+	const hit = byWindow.get(windowDays);
+	if (hit && hit.head === head && hit.startKey === startKey) {
+		// A copy, so a caller that edits its result can't corrupt the cache.
+		return new Map(await hit.counts);
+	}
+	const counts = compute();
+	byWindow.set(windowDays, { head, startKey, counts });
+	try {
+		return new Map(await counts);
+	} catch (err) {
+		if (byWindow.get(windowDays)?.counts === counts) byWindow.delete(windowDays);
+		throw err;
+	}
+}
+
 /**
  * Commit counts per local day, for the heatmap/trend "commits" metric. Covers
  * the last `windowDays` days (53 weeks by default, the heatmap's span),
- * however many commits that is — see {@link commitsSince}.
+ * however many commits that is — see {@link commitsSince} and
+ * {@link commitCountsByDay}.
  */
 export async function commitsByDay(
 	app: App,
 	windowDays = COMMITS_WINDOW_DAYS,
 ): Promise<Map<string, number>> {
-	const counts = new Map<string, number>();
 	const plugin = getGitPlugin(app);
-	if (!plugin) return counts;
-	const start = new Date();
-	start.setHours(0, 0, 0, 0);
-	start.setDate(start.getDate() - windowDays);
-	for (const entry of await commitsSince(plugin, start.getTime())) {
-		const ms = parseCommitDate(entry.date);
-		if (ms == null) continue;
-		const key = localDayKey(ms);
-		counts.set(key, (counts.get(key) ?? 0) + 1);
-	}
-	return counts;
+	return plugin ? commitCountsByDay(plugin, windowDays) : new Map();
 }
 
 /** The abbreviated commit hash git itself shows. */
