@@ -9170,7 +9170,11 @@ body.hearth-dv-resizing {
 	}
 }
 
-/* ---- People cadence card ----------------------------------------------- */
+/* ---- People cadence card -------------------------------------------------
+   The card itself is a people × days heatmap: a sticky name column, fixed-
+   width day columns that scroll sideways rather than stretch to fit — the
+   same shape (and several of the same class names' roles) as the Routine
+   card's grid just above. */
 
 .hearth-peoplecadence {
 	display: flex;
@@ -9184,6 +9188,7 @@ body.hearth-dv-resizing {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
+	flex-wrap: wrap;
 	gap: 8px;
 	flex: 0 0 auto;
 }
@@ -9194,6 +9199,14 @@ body.hearth-dv-resizing {
 	font-weight: 600;
 	text-transform: uppercase;
 	letter-spacing: 0.02em;
+}
+
+.hearth-peoplecadence-sortrow {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	flex: 1 1 auto;
+	justify-content: center;
 }
 
 .hearth-peoplecadence-viewall {
@@ -9211,12 +9224,48 @@ body.hearth-dv-resizing {
 	color: var(--text-normal);
 }
 
-.hearth-peoplecadence-list {
-	display: flex;
-	flex: 1 1 auto;
-	flex-direction: column;
-	min-height: 0;
-	overflow-y: auto;
+.hearth-peoplecadence-sortbtn {
+	padding: 4px 11px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 999px;
+	background: var(--background-primary-alt);
+	color: var(--text-muted);
+	font-size: 0.72rem;
+	cursor: pointer;
+}
+
+.hearth-peoplecadence-sortbtn:hover {
+	color: var(--text-normal);
+}
+
+.hearth-peoplecadence-sortbtn.is-active {
+	border-color: var(--interactive-accent);
+	color: var(--text-normal);
+	background: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
+}
+
+.hearth-peoplecadence-refreshbtn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	margin-left: auto;
+	padding: 0;
+	border: 0;
+	border-radius: 8px;
+	background: transparent;
+	color: var(--text-muted);
+	cursor: pointer;
+}
+
+.hearth-peoplecadence-refreshbtn:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.hearth-peoplecadence-refreshbtn.is-loading {
+	animation: hearth-rss-spin 0.9s linear infinite;
 }
 
 .hearth-peoplecadence-state {
@@ -9224,6 +9273,212 @@ body.hearth-dv-resizing {
 	color: var(--text-muted);
 	font-size: 0.82rem;
 	text-align: center;
+}
+
+.hearth-peoplecadence-gridwrap {
+	display: flex;
+	flex-direction: column;
+	flex: 1 1 auto;
+	min-height: 0;
+}
+
+.hearth-peoplecadence-scroll {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow: auto;
+}
+
+.hearth-peoplecadence-grid {
+	display: grid;
+	grid-template-columns: minmax(110px, max-content) repeat(var(--pc-days, 60), 16px);
+	align-content: start;
+	width: max-content;
+	min-width: 100%;
+}
+
+.hearth-peoplecadence-cell {
+	min-height: 18px;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.hearth-peoplecadence-cell.hearth-peoplecadence-daycell {
+	position: relative;
+	border-right: 1px solid var(--background-modifier-border);
+	background: var(--background-modifier-border-hover);
+}
+
+/* Direction corner mark: who reached out that day — a solid triangle folded
+   into the cell's top-right corner, distinct from (and layered over) the
+   cell's own medium-blended fill underneath it. Sized to read clearly at the
+   grid's normal cell size without swallowing the fill color it sits on. */
+.hearth-peoplecadence-daycell-corner {
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: 9px;
+	height: 9px;
+	clip-path: polygon(100% 0, 100% 100%, 0 0);
+}
+
+/* Sticky name column. */
+.hearth-peoplecadence-label {
+	position: sticky;
+	left: 0;
+	z-index: 1;
+	display: flex;
+	align-items: baseline;
+	gap: 6px;
+	padding: 2px 8px;
+	background: var(--background-primary);
+	overflow: hidden;
+}
+
+.hearth-peoplecadence-label-name {
+	overflow: hidden;
+	color: var(--text-normal);
+	font-size: 0.8rem;
+	font-weight: 500;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.hearth-peoplecadence-label-depth {
+	flex: 0 0 auto;
+	color: var(--text-accent);
+	font-size: 0.68rem;
+	font-variant-numeric: tabular-nums;
+}
+
+/* Sticky day-header row. */
+.hearth-peoplecadence-corner,
+.hearth-peoplecadence-dayhead {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	background: var(--background-primary);
+	border-bottom: 2px solid var(--background-modifier-border);
+}
+
+.hearth-peoplecadence-corner {
+	left: 0;
+	z-index: 2;
+}
+
+.hearth-peoplecadence-dayhead.is-today {
+	border-bottom-color: var(--interactive-accent);
+}
+
+.hearth-peoplecadence-daycell.is-today {
+	background: var(--background-modifier-hover);
+}
+
+.hearth-peoplecadence-daycell.is-pending {
+	outline: 1px dashed var(--text-faint);
+	outline-offset: -2px;
+}
+
+/* Medium legend — always present since the grid's color is the only place
+   medium identity shows up (categorical, so color-alone would fail an
+   accessibility check without it). */
+.hearth-peoplecadence-legend {
+	display: flex;
+	flex: 0 0 auto;
+	flex-wrap: wrap;
+	gap: 14px;
+	margin-top: 6px;
+	color: var(--text-muted);
+	font-size: 0.72rem;
+}
+
+.hearth-peoplecadence-legend-entry {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+}
+
+.hearth-peoplecadence-legend-swatch {
+	flex: 0 0 auto;
+	width: 10px;
+	height: 10px;
+	border-radius: 3px;
+}
+
+.hearth-peoplecadence-legend-swatch-corner {
+	border-radius: 0;
+	clip-path: polygon(100% 0, 100% 100%, 0 0);
+}
+
+/* ---- Filter view (opened from the card's "Filter" button) ---------------- */
+
+.hearth-peoplecadence-modal {
+	width: min(560px, 94vw);
+	max-width: min(560px, 94vw);
+}
+
+.hearth-peoplecadence-modal .modal-content {
+	max-height: min(80vh, 640px);
+	padding-top: 4px;
+	overflow-y: auto;
+}
+
+.hearth-peoplecadence-modal-toolbar {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-bottom: 8px;
+}
+
+.hearth-peoplecadence-search {
+	flex: 1 1 auto;
+	height: 30px;
+	padding: 4px 10px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 999px;
+	background: var(--background-primary-alt);
+	color: var(--text-normal);
+	font-size: 0.82rem;
+}
+
+.hearth-peoplecadence-filters {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-bottom: 12px;
+	padding-bottom: 12px;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.hearth-peoplecadence-filter-mediums {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+
+.hearth-peoplecadence-filter-chip {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--text-muted);
+	font-size: 0.8rem;
+	cursor: pointer;
+}
+
+.hearth-peoplecadence-filter-range {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.hearth-peoplecadence-filter-range .hearth-count-input {
+	width: 100%;
+	max-width: 170px;
+}
+
+.hearth-peoplecadence-modal-list {
+	display: flex;
+	flex-direction: column;
+	max-height: 50vh;
+	overflow-y: auto;
 }
 
 .hearth-peoplecadence-row {
@@ -9263,95 +9518,6 @@ body.hearth-dv-resizing {
 	font-size: 0.72rem;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-}
-
-/* Detail modal (opened from the card's "View all" button) */
-
-.hearth-peoplecadence-modal .modal-content {
-	padding-top: 4px;
-}
-
-.hearth-peoplecadence-modal-toolbar {
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	margin-bottom: 10px;
-}
-
-.hearth-peoplecadence-sortbtn {
-	padding: 4px 11px;
-	border: 1px solid var(--background-modifier-border);
-	border-radius: 999px;
-	background: var(--background-primary-alt);
-	color: var(--text-muted);
-	font-size: 0.78rem;
-	cursor: pointer;
-}
-
-.hearth-peoplecadence-sortbtn:hover {
-	color: var(--text-normal);
-}
-
-.hearth-peoplecadence-sortbtn.is-active {
-	border-color: var(--interactive-accent);
-	color: var(--text-normal);
-	background: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
-}
-
-.hearth-peoplecadence-refreshbtn {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 28px;
-	height: 28px;
-	margin-left: auto;
-	padding: 0;
-	border: 0;
-	border-radius: 8px;
-	background: transparent;
-	color: var(--text-muted);
-	cursor: pointer;
-}
-
-.hearth-peoplecadence-refreshbtn:hover {
-	background: var(--background-modifier-hover);
-	color: var(--text-normal);
-}
-
-.hearth-peoplecadence-refreshbtn.is-loading {
-	animation: hearth-rss-spin 0.9s linear infinite;
-}
-
-.hearth-peoplecadence-modal-list {
-	display: flex;
-	flex-direction: column;
-	max-height: 60vh;
-	overflow-y: auto;
-}
-
-.hearth-peoplecadence-modal-row {
-	display: grid;
-	grid-template-columns: 1fr auto;
-	align-items: baseline;
-	column-gap: 10px;
-	padding: 8px 4px;
-	border-bottom: 1px solid var(--background-modifier-border);
-}
-
-.hearth-peoplecadence-modal-row:last-child {
-	border-bottom: 0;
-}
-
-.hearth-peoplecadence-modal-row .hearth-peoplecadence-name {
-	font-size: 0.9rem;
-}
-
-.hearth-peoplecadence-modal-row .hearth-peoplecadence-depth {
-	font-size: 0.76rem;
-}
-
-.hearth-peoplecadence-modal-row .hearth-peoplecadence-meta {
-	font-size: 0.76rem;
 }
 
 /* ---- Theme focus-ring guard ------------------------------------------

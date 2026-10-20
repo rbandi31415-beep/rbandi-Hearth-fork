@@ -158,9 +158,9 @@ describe("CARD_TEMPLATES (add-card menu)", () => {
 				build: {
 					kind: "peopleCadence",
 					title: "People cadence",
-					peopleCadence: { count: 5, refreshMin: 2, cacheMin: 1 },
-					w: 4,
-					h: 4,
+					peopleCadence: { count: 10, days: 60, refreshMin: 2, cacheMin: 1 },
+					w: 8,
+					h: 5,
 				},
 			},
 

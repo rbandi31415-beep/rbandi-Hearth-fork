@@ -82,14 +82,21 @@ export interface JiraConfig {
 	cacheMin?: number;
 }
 
+/** How the people-cadence heatmap's rows are ordered. */
+export type PeopleCadenceSort = "depth" | "name" | "activity";
+
 /** Per-card connection and display settings for the "peopleCadence" card. */
 export interface PeopleCadenceConfig {
 	/** Origin (https scheme + host) of the contact-cadence feed. */
 	host?: string;
 	/** Bearer token for the feed. Stored in Obsidian plugin data. */
 	token?: string;
-	/** How many lowest-depth people the compact card shows. Default 5. */
+	/** How many people (rows) the card's heatmap shows. Default 10. */
 	count?: number;
+	/** How many day-columns the card's heatmap covers. Default 60. */
+	days?: number;
+	/** Row order. Default "depth" (lowest first, from the feed's own order). */
+	sortBy?: PeopleCadenceSort;
 	/** Automatic refresh interval in minutes. 0 disables it. */
 	refreshMin?: number;
 	/** In-memory request cache interval in minutes. Default 1. */

@@ -42,7 +42,7 @@ export function peopleCadenceEditor(ctx: CardEditorContext, containerEl: HTMLEle
 		.setName(strings.count)
 		.setDesc(strings.countDesc)
 		.addText((txt) => {
-			txt.setValue(String(cfg.count ?? 5)).onChange((value) => {
+			txt.setValue(String(cfg.count ?? 10)).onChange((value) => {
 				const parsed = parseInt(value, 10);
 				cfg.count = Number.isNaN(parsed) || parsed <= 0 ? undefined : Math.min(50, parsed);
 				ctx.opts.save();
@@ -51,6 +51,35 @@ export function peopleCadenceEditor(ctx: CardEditorContext, containerEl: HTMLEle
 			txt.inputEl.min = "1";
 			txt.inputEl.max = "50";
 			txt.inputEl.addClass("hearth-count-input");
+		});
+
+	new Setting(containerEl)
+		.setName(strings.days)
+		.setDesc(strings.daysDesc)
+		.addText((txt) => {
+			txt.setValue(String(cfg.days ?? 60)).onChange((value) => {
+				const parsed = parseInt(value, 10);
+				cfg.days = Number.isNaN(parsed) || parsed <= 0 ? undefined : Math.min(180, parsed);
+				ctx.opts.save();
+			});
+			txt.inputEl.type = "number";
+			txt.inputEl.min = "7";
+			txt.inputEl.max = "180";
+			txt.inputEl.addClass("hearth-count-input");
+		});
+
+	new Setting(containerEl)
+		.setName(strings.sortBy)
+		.setDesc(strings.sortByDesc)
+		.addDropdown((d) => {
+			d.addOption("depth", strings.sortByDepth);
+			d.addOption("name", strings.sortByName);
+			d.addOption("activity", strings.sortByActivity);
+			d.setValue(cfg.sortBy ?? "depth").onChange((v) => {
+				cfg.sortBy = v === "depth" ? undefined : (v as NonNullable<typeof cfg.sortBy>);
+				ctx.opts.save();
+				ctx.requestRender();
+			});
 		});
 
 	const numberSetting = (
@@ -83,7 +112,7 @@ export function peopleCadenceEditor(ctx: CardEditorContext, containerEl: HTMLEle
 
 /** A read-only viewer for an external contact-cadence feed: who you're
  * drifting away from, by real logged contact. No decay/depth math happens
- * here — see src/peoplecadence.ts for why, and for the render/detail-modal
+ * here — see src/peoplecadence.ts for why, and for the render/filter-view
  * implementation this definition wraps. */
 export const peopleCadenceCard: CardDefinition<"peopleCadence"> = {
 	kind: "peopleCadence",
@@ -96,12 +125,13 @@ export const peopleCadenceCard: CardDefinition<"peopleCadence"> = {
 				kind: "peopleCadence",
 				title: "People cadence",
 				peopleCadence: {
-					count: 5,
+					count: 10,
+					days: 60,
 					refreshMin: 2,
 					cacheMin: 1,
 				},
-				w: 4,
-				h: 4,
+				w: 8,
+				h: 5,
 			}),
 		},
 	],
