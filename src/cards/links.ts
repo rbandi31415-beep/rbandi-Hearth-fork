@@ -1,5 +1,5 @@
 import { setTooltip, Setting, TFile } from "obsidian";
-import { applyTileSize, emptyState, makeTileDraggable, makeTileResizable, markOverlappingTiles } from "../cardbodies";
+import { emptyState } from "../cardbodies";
 import { moveItem } from "../editors";
 import { t } from "../i18n";
 import { openFile, openLink as openLinkTarget } from "../opener";
@@ -20,42 +20,25 @@ export function renderLinks(view: HomeView, card: DashboardCard, body: HTMLEleme
 		return;
 	}
 
-	const grid = body.createDiv("hearth-links hearth-tiles-sized");
-	const baseTile = card.tileSize && card.tileSize > 0 ? card.tileSize : 90;
-	grid.style.setProperty("--hearth-tile", `${baseTile}px`);
-	// Flag the card body so CSS can disable the card drag overlay over tiles in
-	// arrange mode (tiles are self-contained widgets with their own resize).
-	if (view.arrangeMode) body.addClass("hearth-tiles-arrange");
-	for (const link of links) {
-		const tile = grid.createDiv("hearth-link-tile");
-		applyTileSize(tile, link.sizeW, link.sizeH, link.size, baseTile, link.col, link.row);
-		applyTileVisual(view, tile, link.icon, "link");
-		tile.createDiv({ cls: "hearth-link-label", text: link.label || link.target });
-		const open = () => openLink(view, link);
-		// In arrange mode, clicking a tile must NOT trigger its action — the
-		// click is almost always the tail end of a resize/drag gesture.
-		if (!view.arrangeMode) {
-			tile.addEventListener("click", open);
-			makeClickable(tile, open, link.label || link.target);
-		}
-
-		// Tiles can only be resized/repositioned while the dashboard is in
-		// arrange mode.
-		if (view.arrangeMode) {
-			makeTileResizable(view, tile, baseTile, () => link.sizeW, (v) => {
-				link.sizeW = v;
-			}, () => link.sizeH, (v) => {
-				link.sizeH = v;
-			}, () => link.size, (v) => {
-				link.size = v;
-			});
-			makeTileDraggable(view, grid, tile, links, link, card.tileAutoFlow === true);
+	// Fixed layout: every tile fills an equal share of the card, split into a
+	// roughly-square grid (same as the Commands card's "even" layout), so the
+	// launchpad scales with the card and tiles can't be dragged or resized.
+	// Any per-tile size/col/row saved by the old free-form layout is ignored.
+	const wrap = body.createDiv("hearth-links hearth-tiles-even");
+	const cols = Math.max(1, Math.ceil(Math.sqrt(links.length)));
+	for (let i = 0; i < links.length; i += cols) {
+		const row = wrap.createDiv("hearth-tile-grid-row");
+		for (const link of links.slice(i, i + cols)) {
+			const tile = row.createDiv("hearth-link-tile");
+			applyTileVisual(view, tile, link.icon, "link");
+			tile.createDiv({ cls: "hearth-link-label", text: link.label || link.target });
+			if (!view.arrangeMode) {
+				const open = () => openLink(view, link);
+				tile.addEventListener("click", open);
+				makeClickable(tile, open, link.label || link.target);
+			}
 		}
 	}
-
-	// Flag tiles obscured behind a sibling so the overlap is visible (always,
-	// not just in arrange mode — a hidden tile is a problem either way).
-	markOverlappingTiles(grid);
 }
 
 
@@ -81,16 +64,6 @@ export function linksEditor(ctx: CardEditorContext, containerEl: HTMLElement): v
 	new Setting(containerEl).setName(t().editors.links.heading).setHeading();
 	const card = ctx.card;
 	const links = (card.links ??= []);
-
-	new Setting(containerEl)
-		.setName(t().editors.links.autoShift)
-		.setDesc(t().editors.links.autoShiftDesc)
-		.addToggle((t) =>
-			t.setValue(card.tileAutoFlow ?? false).onChange((v) => {
-				card.tileAutoFlow = v;
-				ctx.opts.save();
-			}),
-		);
 
 	links.forEach((link, index) => {
 		const row = new Setting(containerEl).setClass("hearth-link-setting");
